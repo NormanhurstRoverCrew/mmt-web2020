@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" href="mailer.css">
+    <style>
+    .center_header {
+        margin: auto;
+        width: 80%;
+        padding: 10px;
+    }
+
+
+    .center_body {
+        margin: auto;
+        width: 60%;
+        padding: 10px;
+    }
+
+    .center_qr {
+        margin: auto;
+    }
+
+    p, li {
+        font-size: 2em;
+    }
+
+    h2 {
+        font-size: 2.5em;
+    }
+
+    @media screen and (max-width:800px) {
+      .center_header {
+        width: unset !important;
+        padding: 10px !important;
+      }
+
+      .center_body {
+        width: 90% !important;
+      }
+
+      .center_qr {
+        width: 100% !important;
+      }
+
+      p, li {
+        font-size: 1.3em !important;
+      }
+
+      h2 {
+          font-size: 1.8em !important;
+      }
+    }
+  </style>
+</head>
+
+  <body>
+    <%= yield %>
+  </body>
+</html>

@@ -1,0 +1,99 @@
+version: '3.0'
+
+services:
+   rego:
+      build: 
+         context: rego/.
+         dockerfile: Dockerfile.prod
+      command: npm run prod
+      restart: always
+      ports:
+         - 3000:3000
+      networks:
+         - mmt-dmz
+         - proxy
+      environment:
+         NODE_ENV: ${MMT19_ENV}
+   admin:
+      build: 
+         context: admin/.
+         dockerfile: Dockerfile.prod
+      command: npm run prod
+      restart: always
+      ports:
+         - 3001:3000
+      networks:
+         - mmt-dmz
+         - proxy
+      environment:
+         NODE_ENV: ${MMT19_ENV}
+   backend:
+      build: backend/.
+      restart: always
+      ports:
+         - 3010:3000
+      links:
+         - db
+      networks:
+         - mmt-dmz
+      volumes:
+         - ./backend/app:/usr/src/app/app
+         - ./backend/config:/usr/src/app/config
+         - ./backend/test:/usr/src/app/test
+         - ./backend/db:/usr/src/app/db
+      environment:
+         RAILS_ENV: ${MMT19_ENV}
+         DB_URL: ${MMT19_DB_URL}
+         DB_PASSWORD: ${MMT19_DB_DEV_PASSWORD}
+         DB_USER: ${MMT19_DB_DEV_USER}
+         DB_TEST_NAME: ${MMT19_DB_DEV_USER}
+         MAILGUN_KEY: ${MMT19_MAILGUN_KEY}
+         MAILGUN_DOMAIN: ${MMT19_MAILGUN_DOMAIN}
+   nginx:
+      build: ./nginx
+      restart: always
+      # ports:
+      #    - "8080:80"
+      networks:
+         - proxy
+      volumes:
+         - ./nginx/config:/etc/nginx
+         - ./nginx/error_pages:/etc/nginx/error_pages
+      links:
+         - rego
+         - admin
+   db:
+      image: postgres
+      restart: always
+      # ports:
+         # - "5432:5432"
+      networks:
+         - mmt-dmz
+      environment:
+         POSTGRES_PASSWORD: "${MMT19_DB_POSTGRES_PASSWORD}"
+      volumes:
+         - ${MMT19_DB_PATH}:/var/lib/postgresql/data
+   event:
+      build: 
+         context: event/.
+         dockerfile: Dockerfile.prod
+      command: ./event
+      restart: always
+      links:
+         - admin
+         - backend
+      ports:
+         - 8082:8000
+      networks:
+         - mmt-dmz
+         - proxy
+
+networks:
+   default:
+      driver: bridge
+   mmt-dmz:
+      external:
+         name: mmt-dmz
+   proxy:
+      external:
+         name: proxy

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<style>
+	@import url('https://fonts.googleapis.com/css?family=Encode+Sans+Semi+Condensed:300,700|Holtwood+One+SC|Pattaya|Monoton');
+	div.alwaysbreak { page-break-before: always; }
+	div.nobreak:before { clear:both; }
+	div.nobreak { page-break-inside: avoid; }
+	body {
+		height: 100%;
+		width: 99%;
+		position: absolute;
+		font-family: 'Encode Sans Semi Condensed';
+	}
+	div {
+		border-color: rgb(231,71, 229);
+		border-width: 0px;
+		border-style: solid;
+	}
+	p {
+		margin: 0px;
+	}
+	img {
+		display: block;
+		margin: auto;
+	}
+	h1 {
+		margin:0px;
+	}
+	#participant-dear {
+		font-size: 18px;
+	}
+	#u-invited {
+		position: absolute;
+		top: 30px;
+		left: 0px;
+		font-family: 'Pattaya';
+		font-size:25px;
+		color: #000;
+	}
+	#nrcs, #nrcIm {
+		position: absolute;
+		top: 80px;
+		/* left: 155px; */
+		width: 100%;
+		font-family: 'Holtwood One SC';
+		font-size: 15px;
+		color: #283890;
+	}
+	#mmtIm {
+		position: absolute;
+		top: 130px;
+		width: 100%;
+	}
+
+	#mmtTie {
+		position: absolute;
+		top: 325px;
+		width: 100%;
+	}
+	.imInfo {
+		display: block;
+		position: absolute;
+	}
+	.imInfo .img {
+		display: inline;
+		float: left;
+	}
+	.imInfo .txt {
+		display: inline;
+		float: right;
+		font-size: 20px;
+		margin-top: 12px;
+		margin-left: 10px;
+	}
+	#when {
+		top: 370px;
+		left: 40px;
+	}
+	#where {
+		top: 370px;
+		right: 40px;
+	}
+	#dress {
+		top: 440px;
+		left: 20%;
+	}
+	#instructions {
+		position: absolute;
+		top: 520px;
+	}
+	#instructions h1 {
+		font-size: 30px;
+		font-weight: 700;
+		margin-bottom: 10px;
+	}
+	#instructions p {
+		font-size: 20px;
+		margin-bottom: 8px;
+		line-height: 30px;
+	}
+	#bring {
+		position: absolute;
+		top: 830px;
+		left: 0px;
+		width: 270px;
+	}
+	#bring h1 {
+		font-size: 30px;
+		font-weight: 700;
+		margin-bottom: 2px;
+	}
+	#bring ul {
+		line-height: 20px;
+	}
+	#details {
+		position: absolute;
+		top: 830px;
+		left: 280px;
+		width: 290px;
+	}
+	#details p {
+		margin-bottom: 4px;
+	}
+
+	#rQR {
+		position: absolute;
+		right: 0px;
+		top: 830px;
+	}
+	</style>
+</head>
+
+<body>
+	<p id="participant-dear"><%="Detective #{@ticket.user.name},"%></p>
+	<p id="u-invited">There has been a murder! Please find out who did it.</p>
+	<div id="nrcIm">
+		<%= image_tag wicked_pdf_asset_base64(Rails.root.join('app', 'assets', 'images', 'test.png')), size: "400x60" %>
+	</div>
+	<div id="mmtIm">
+		<%= image_tag wicked_pdf_asset_base64(Rails.root.join('app', 'assets', 'images', 'test.png')), size: "600x200" %>
+	</div>
+	<div id="mmtTie">
+		<%= image_tag wicked_pdf_asset_base64(Rails.root.join('app', 'assets', 'images', 'test.png')), size: "450x30" %>
+	</div>
+	<div class="imInfo" id="when">
+		<div class="img">
+			<%= image_tag wicked_pdf_asset_base64(Rails.root.join('app', 'assets', 'images', 'test.png')), size: "60x60" %>
+		</div>
+		<div class="txt">
+			When : 8am 8th - 9th<br>September
+		</div>
+	</div>
+	<div class="imInfo" id="where">
+		<div class="img">
+			<%= image_tag wicked_pdf_asset_base64(Rails.root.join('app', 'assets', 'images', 'test.png')), size: "50x60" %>
+		</div>
+		<div class="txt">
+			Where : Thornleigh Maccas<br>Overflow Carpark
+		</div>
+	</div>
+	<div class="imInfo" id="dress">
+		<div class="img">
+			<%= image_tag wicked_pdf_asset_base64(Rails.root.join('app', 'assets', 'images', 'test.png')), size: "60x50" %>
+		</div>
+		<div class="txt">
+			Dress Code : Detective / Sherlock / Dead person<br>Surprise us ;)
+		</div>
+	</div>
+
+	<div id="instructions">
+		<h1>Important Instructions</h1>
+		<p>
+			Welcome Detective!<br>
+			Come join us on our investigation into the murder of local celebrity, Taylor Davidson, and help us catch the killer.
+		</p>
+		<p>
+			Grab your team of detectives and head over to the E1 table, then move on to the registration tent with your E1 and detective(QR) code ready. Make sure you <b>print out</b> or save your code on your phone ready to be scanned. After you will get your case file to help you through the events of the day.
+		</p>
+		<p>
+			There will also be a coffee van to get your hard working day started.
+		</p>
+	</div>
+
+	<div id="bring">
+		<h1>What to Bring</h1>
+		<ul>
+			<li>ID</li>
+			<li>This Invite</li>
+			<li>Camping Gear</li>
+			<li>Tent</li>
+			<li>Your Team's Vehicle</li>
+			<li>Drinks/Alcohol - <b>There is no pub at the endpoint</b></li>
+			<li>Scooby Snacks</li>
+			<li>Detective Cap</li>
+		</ul>
+	</div>
+
+	<div id="details">
+		<h1>Your Details</h1>
+		<p>Name:<br><b><%="#{@ticket.user.name}"%></b></p>
+		<p>ID:<br><b><%="#{@ticket.id}"%></b></p>
+		<p>Your Contact Number:<br><b><%="#{@ticket.user.mobile}"%></b></p>
+		<p>Crew:<br><b><%="#{@ticket.user.crew}"%></b></p>
+	</div>
+
+	<div id="rQR">
+		<%= image_tag wicked_pdf_asset_base64(@qr), size: "330x330" %>
+	</div>
+</body>
+</html>

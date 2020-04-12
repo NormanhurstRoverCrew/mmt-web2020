@@ -1,0 +1,24 @@
+// require this babelrc specifically for the
+{
+  "presets": [
+    ["@babel/preset-env",{
+      "targets": {"node": "10"}
+    }],
+    "@babel/preset-react"
+  ],
+  "plugins": [
+    "@babel/plugin-proposal-class-properties",
+    "@babel/plugin-syntax-function-bind",
+    ["module-resolver", {
+      "root": ["./"],
+      "alias": {
+        "components": "./client/components/",
+        "img": "./client/img/",
+        "lib": "./client/lib/",
+        "views": "./client/views/",
+	"tests": "./tests/",
+	"rego": "./"
+      }
+    }]
+  ]
+}

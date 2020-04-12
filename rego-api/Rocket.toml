@@ -1,0 +1,18 @@
+[development.databases.primary_db]
+url = "mongodb://db:27017/mmt_development"
+
+[development]
+address = "0.0.0.0"
+port = 8000
+workers = 2
+keep_alive = 5
+log = "normal"
+
+[production]
+address = "0.0.0.0"
+port = 8000
+workers = 4
+keep_alive = 5
+log = "critical"
+secret_key = "HtZMccTD5qRzRpQKpaQhMtFWA6OHY9w/XXhl+f5V1HQ="
+limits = { forms = 32768 }

@@ -1,0 +1,59 @@
+version: '3.0'
+
+services:
+   empty_node_react:
+      build: empty_node_react/.
+      command: npm run dev
+      restart: always
+      ports:
+         - 8080:8080
+         - 3000:3000
+      networks:
+         - mmt-dmz
+         - proxy
+      volumes:
+         - ./empty_node_react/app/client/:/usr/src/client
+         - ./empty_node_react/app/server/:/usr/src/server
+         - ./empty_node_react/app/tests/:/usr/src/tests
+         - ./empty_node_react/app/coverage/:/usr/src/coverage
+      environment:
+         NODE_ENV: ${MMT19_ENV}
+   empty_rails_api:
+      build: empty_rails_api/.
+      restart: always
+      ports:
+         - 3001:3000
+      networks:
+         - mmt-dmz
+      volumes:
+         - ./empty_rails_api/app:/usr/src/app/app
+         - ./empty_rails_api/config:/usr/src/app/config
+         - ./empty_rails_api/test:/usr/src/app/test
+         - ./empty_rails_api/db:/usr/src/app/db
+      environment:
+         RAILS_ENV: ${MMT19_ENV}
+         DB_URL: ${MMT19_DB_URL}
+         DB_PASSWORD: ${MMT19_DB_DEV_PASSWORD}
+         DB_USER: ${MMT19_DB_DEV_USER}
+         DB_TEST_NAME: ${MMT19_DB_DEV_USER}
+   db:
+      image: postgres
+      restart: always
+      # ports:
+         # - "5432:5432"
+      networks:
+         - mmt-dmz
+      environment:
+         POSTGRES_PASSWORD: "${MMT19_DB_POSTGRES_PASSWORD}"
+      volumes:
+         - ${MMT19_DB_PATH}:/var/lib/postgresql/data
+
+networks:
+   default:
+      driver: bridge
+   mmt-dmz:
+      external:
+         name: mmt-dmz
+   proxy:
+      external:
+         name: proxy

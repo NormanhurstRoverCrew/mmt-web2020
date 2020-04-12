@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<style>
+	@import url('https://fonts.googleapis.com/css?family=Encode+Sans+Semi+Condensed:300,700');
+	div.alwaysbreak { page-break-before: always; }
+	div.nobreak:before { clear:both; }
+	div.nobreak { page-break-inside: avoid; }
+	body {
+		height: 100%;
+		width: 99%;
+		position: absolute;
+		font-family: 'Encode Sans Semi Condensed';
+	}
+	#group {
+		position: relative;
+		display: inline;
+	}
+	td {
+		padding: 16px;
+		page-break-inside: avoid;
+	}
+	#top {
+		width: 100%;
+		text-align: center;
+		margin: 2px;
+		position: relative;
+		top: 10px;
+		height: 0px;
+		-webkit-transform: rotate(180deg);
+	}
+	#bottom {
+		width: 100%;
+		text-align: center;
+		margin: 2px;
+		position: relative;
+		top: 5px;
+		height: 0px;
+	}
+	#left {
+		-webkit-transform: rotate(90deg);
+		position: relative;
+		text-align: center;
+		width: 100%;
+		left: -160px;
+		top: 170px;
+		height: 0px;
+	}
+	#right {
+		-webkit-transform: rotate(-90deg);
+		position: relative;
+		text-align: center;
+		width: 100%;
+		left: 160px;
+		top: -160px;
+		height: 0px;
+	}
+	#qr {
+		position: relative;
+		top: 10px;
+	}
+	table, tr, td, th, tbody, thead, tfoot {
+    page-break-inside: avoid !important;
+}
+	</style>
+</head>
+
+<body>
+	<%(0..@qr.length/6).each do |qi|%>
+	<div>
+		<table>
+			<tr>
+				<td>
+					<%if @qr[qi*6] then %>
+					<div id="top">MMT VALHALLA - TEAM <%=@qr[(qi*6)][:id]%></div>
+					<div id="left">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="qr"><%= image_tag wicked_pdf_asset_base64(@qr[(qi*6)][:image]), size: "320x320"%></div>
+					<div id="right">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="bottom">MMT VALHALLA - TEAM <%=@qr[(qi*6)][:id]%></div>
+					<%end%>
+				</td>
+				<td style="width:30px;"></td>
+				<td>
+					<%if @qr[(qi*6)+1] then %>
+					<div id="top">MMT VALHALLA - TEAM <%=@qr[(qi*6)+1][:id]%></div>
+					<div id="left">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="qr"><%= image_tag wicked_pdf_asset_base64(@qr[(qi*6)+1][:image]), size: "320x320"%></div>
+					<div id="right">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="bottom">MMT VALHALLA - TEAM <%=@qr[(qi*6)+1][:id]%></div>
+					<%end%>
+				</td>
+			</tr>
+			<tr style="height:20px;"></tr>
+			<tr>
+				<td>
+					<%if @qr[(qi*6)+2] then %>
+					<div id="top">MMT VALHALLA - TEAM <%=@qr[(qi*6)+2][:id]%></div>
+					<div id="left">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="qr"><%= image_tag wicked_pdf_asset_base64(@qr[(qi*6)+2][:image]), size: "320x320"%></div>
+					<div id="right">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="bottom">MMT VALHALLA - TEAM <%=@qr[(qi*6)+2][:id]%></div>
+					<%end%>
+				</td>
+				<td style="width:30px;"></td>
+				<td>
+					<%if @qr[(qi*6)+3] then %>
+					<div id="top">MMT VALHALLA - TEAM <%=@qr[(qi*6)+3][:id]%></div>
+					<div id="left">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="qr"><%= image_tag wicked_pdf_asset_base64(@qr[(qi*6)+3][:image]), size: "320x320"%></div>
+					<div id="right">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="bottom">MMT VALHALLA - TEAM <%=@qr[(qi*6)+3][:id]%></div>
+					<%end%>
+				</td>
+			</tr>
+			<tr style="height:20px;"></tr>
+			<tr>
+				<td>
+					<%if @qr[(qi*6)+4] then %>
+					<div id="top">MMT VALHALLA - TEAM <%=@qr[(qi*6)+4][:id]%></div>
+					<div id="left">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="qr"><%= image_tag wicked_pdf_asset_base64(@qr[(qi*6)+4][:image]), size: "320x320"%></div>
+					<div id="right">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="bottom">MMT VALHALLA - TEAM <%=@qr[(qi*6)+4][:id]%></div>
+					<%end%>
+				</td>
+				<td style="width:30px;"></td>
+				<td>
+					<%if @qr[(qi*6)+5] then %>
+					<div id="top">MMT VALHALLA - TEAM <%=@qr[(qi*6)+5][:id]%></div>
+					<div id="left">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="qr"><%= image_tag wicked_pdf_asset_base64(@qr[(qi*6)+5][:image]), size: "320x320"%></div>
+					<div id="right">CONTACT: ALYSSA 0448 349 838</div>
+					<div id="bottom">MMT VALHALLA - TEAM <%=@qr[(qi*6)+5][:id]%></div>
+					<%end%>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<%end%>
+</body>
+</html>

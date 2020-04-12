@@ -1,0 +1,117 @@
+# Javascript Node CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+#
+version: 2
+jobs:
+  test-empty-rails-api:
+    docker:
+      - image: circleci/ruby:2.5.1-node
+        environment:
+          RAILS_ENV: test
+          DB_URL: 127.0.0.1
+          DB_TEST_USER: root
+          DB_TEST_NAME: mmt_empty_rails_api-test
+      - image: circleci/postgres:9.6.2-alpine
+        environment:
+          POSTGRES_USER: root
+          POSTGRES_DB: circle-test_test
+    working_directory: ~/mmt/empty_rails_api
+    steps:
+      - checkout:
+          path: ~/mmt
+
+      - restore_cache:
+          keys:
+            - mmt-empty-rails-api-bundle-v8-{{ checksum "Gemfile.lock" }}
+            - mmt-empty-rails-api-bundle-v8-
+  
+      - run: # Install Ruby dependencies
+          name: Bundle Install
+          command: bundle check --path ~/mmt/empty_rails_api/bundle || bundle install --path ~/mmt/empty_rails_api/bundle
+
+        # Store bundle cache for Ruby dependencies
+      - save_cache:
+          key: mmt-empty-rails-api-bundle-v8-{{ checksum "Gemfile.lock" }}
+          paths:
+            - ~/mmt/empty_rails_api/bundle
+
+      - run:
+          name: Waiting for Postgres to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Postgres && exit 1
+  
+      - run:
+          name: Database Setup
+          command: |
+            bundle exec rake db:create
+            bundle exec rake db:migrate
+          environment:
+            DATABASE_URL: "postgres://root@localhost:5432/mmt_test"
+  
+      - run:
+          name: Test Empty Rails API
+          command: |
+            bundle exec rails test
+          environment:
+            DISABLE_SPRING: 1
+            DATABASE_URL: "postgres://root@localhost:5432/mmt_test"
+  
+      - store_test_results:
+          path: /tmp/test-results
+
+  test-empty-node-react:
+    docker:
+      - image: circleci/node:8.9.1
+        environment:
+          NODE_ENV: test
+    working_directory: ~/mmt/empty_node_react/app
+    steps:
+      - checkout:
+          path: ~/mmt
+
+      - restore_cache:
+          keys:
+            - mmt-empty-node-react-modules-v1-{{ checksum "package.json" }}
+            - mmt-empty-node-react-modules-v1-
+  
+      - run: # Install Ruby dependencies
+          name: NPM Install
+          command: npm install
+
+        # Store bundle cache for Ruby dependencies
+      - save_cache:
+          key: mmt-empty-node-react-modules-v1-{{ checksum "package.json" }}
+          paths:
+            - ~/mmt/empty_node_react/app/node_modules
+
+      - run:
+          name: Test Empty Node React
+          command: |
+            npm test
+  
+      - store_artifacts: # special step to save test results as as artifact
+          # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
+          path: test-results.xml
+          prefix: tests
+      - store_artifacts: # for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
+          path: coverage
+          prefix: coverage
+      - store_test_results: # for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: test-results.xml
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - test-empty-rails-api
+      - test-empty-node-react
+      # - test:
+      #   requires:
+      #     - build

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  nginx:
+    build: .
+    restart: always
+    ports:
+      - "8080:80"
+    networks:
+      - mmt
+    volumes:
+      - ./config:/etc/nginx
+      - ./error_pages:/etc/nginx/error_pages
+    external_links:
+      - mmt_web
+      - mmt_admin
+      - mmt_paypal
+      - mmt_api
+
+networks:
+  mmt:
+    external:
+      name: mmt
