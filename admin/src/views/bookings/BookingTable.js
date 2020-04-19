@@ -15,7 +15,7 @@ export const BookingTable = ({classes}) => {
 				xs={12}>
 				<MaterialTable
 					columns={[
-						{title: "ID", field: "id", type: "numeric", defaultSort: "desc"},
+						{title: "ID", field: "idn", type: "numeric", defaultSort: "desc"},
 						{title: "Name", field: "user.name"},
 						{title: "Quantity/Tickets", field: "tickets.length", type: "numeric"},
 						{title: "Created", field: "created_at", type: "datetime"},

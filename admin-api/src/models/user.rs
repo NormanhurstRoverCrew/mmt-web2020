@@ -1,6 +1,6 @@
 use crate::{
 	db::{helpers as DBHelper, FromDoc},
-	graphql::{context::Database, util::string_to_id},
+	graphql::{context::SharedContext, util::string_to_id},
 	models::{utils::*, Booking, Ticket},
 };
 use juniper::{GraphQLInputObject, ID};
@@ -62,14 +62,14 @@ impl User {
 
 	pub fn get_code(&self) -> &str { &self.code }
 
-	pub fn get_booking(&self, db : &Database) -> Option<Booking> {
+	pub fn get_booking(&self, db : &SharedContext) -> Option<Booking> {
 		let user_id = &self.id;
 
 		let bookings = db.bookings_handel();
 		let booking = DBHelper::find::<Booking>(
 			&bookings,
 			doc! {
-				"user_id" => string_to_id(user_id).expect("UID").to_owned(),
+				"user_id" => string_to_id(user_id).expect("UID"),
 			},
 		);
 
@@ -88,7 +88,7 @@ impl User {
 		booking
 	}
 
-	pub fn get_ticket(&self, _db : &Database) -> Option<Ticket> {
+	pub fn get_ticket(&self, _db : &SharedContext) -> Option<Ticket> {
 		let _user_id = dbg!(&self.id);
 
 		None
@@ -110,30 +110,29 @@ impl FromDoc for User {
 	}
 }
 
-graphql_object!(User: Database |&self| {
-	// description: "Contact Details of the person making the purchase"
-
-	field id() -> ID { ID::from(self.id.to_owned()) }
+#[juniper::graphql_object(Context = SharedContext)]
+impl User {
+	fn id(&self) -> ID { ID::from(self.id.to_owned()) }
 
 	/// Contact name
-	field name() -> &str { &self.name }
+	fn name(&self) -> &str { &self.name }
 
 	/// Contact email
-	field email() -> &str { &self.email }
+	fn email(&self) -> &str { &self.email }
 
 	/// Contact mobile
-	field mobile() -> &str { &self.mobile }
+	fn mobile(&self) -> &str { &self.mobile }
 
 	/// Crew
-	field crew() -> &str { &self.crew }
+	fn crew(&self) -> &str { &self.crew }
 
 	/// Diet
-	field diet() -> &str { &self.diet }
+	fn diet(&self) -> &str { &self.diet }
 
 	/// Has this users email been verified?
-	field email_verified() -> bool { self.email_verified }
+	fn email_verified(&self) -> bool { self.email_verified }
 
-	field booking(&exec) -> Option<Booking> { self.get_booking(exec.context()) }
+	fn booking(&self, context : &SharedContext) -> Option<Booking> { self.get_booking(context) }
 
-	field ticket(&exec) -> Option<Ticket> { self.get_ticket(exec.context()) }
-});
+	fn ticket(&self, context : &SharedContext) -> Option<Ticket> { self.get_ticket(context) }
+}

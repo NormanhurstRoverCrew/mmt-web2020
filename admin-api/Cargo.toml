@@ -13,15 +13,27 @@ path = "src/bin/main.rs"
 name = "mmtapi"
 
 [dependencies]
-rocket = "0.4.2"
-rocket_contrib = { version = "0.4.2", default-features = false, features = ["json", "mongodb_pool"] }
+rocket = { version = "0.4", default-features = false }
+rocket_contrib = { version = "0.4", default-features = false, features = ["json", "mongodb_pool"] }
 bson = "0.14.0"
 mongodb = "0.3"
-juniper = "0.14.2"
-juniper_rocket = "0.5"
-rocket_cors = "0.5.1"
+#juniper = "0.14.2"
+futures = "0.3.1"
+juniper= { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
+# juniper_rocket = "0.5.0"
+juniper_rocket = { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
+rocket_cors = "0.5.2"
 stripe-rust = { version = "0.11.*", default-features = true }
 rand = "0.7"
 lettre = { git = "https://github.com/lettre/lettre" }
 email = { version = "^0.0.20" }
 askama = "0.8"
+
+
+jsonwebtoken = "7"
+serde = {version = "1.0", features = ["derive"] }
+serde_json = "1.0.3"
+
+chrono = { version = "0.4", features = ["serde"] }
+
+reqwest = { version = "0.10", features = ["json", "blocking"] }

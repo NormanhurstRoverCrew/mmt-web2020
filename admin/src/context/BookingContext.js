@@ -54,6 +54,12 @@ const DELETE_TICKETS = gql`
 	}
 `;
 
+const BOOKING_DELETE = gql`
+	mutation DeleteBooking($bid: String!) {
+		deleteBooking(bookingId: $bid)
+	}
+`;
+
 const BOOKING_ADD_TRANSACTION = gql`
 	mutation AddTransaction(
 		$booking_id: String!
@@ -158,6 +164,16 @@ const BookingContextProvider = ({children}) => {
 		refetchBookings();
 	}, [dataAddTransaction]);
 
+	const [_deleteBooking, {data: dataDeleteBooking}] = useMutation(
+		BOOKING_DELETE,
+	);
+	const deleteBooking = booking => {
+		_deleteBooking({variables: {bid: booking.id}});
+	};
+	useEffect(() => {
+		refetchBookings();
+	}, [dataDeleteBooking]);
+
 	const obj = {
 		bookings,
 		tickets,
@@ -165,6 +181,7 @@ const BookingContextProvider = ({children}) => {
 		deleteTickets,
 		reloadData,
 		addTransaction,
+		deleteBooking,
 	};
 
 	return (

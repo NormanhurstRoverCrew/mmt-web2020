@@ -1,9 +1,4 @@
-use crate::{
-	db::{helpers as DBHelper, FromDoc},
-	graphql::context::Database,
-	models::{utils::*, Booking},
-};
-use juniper::ID;
+use crate::{db::FromDoc, graphql::context::SharedContext, models::utils::*};
 use mongodb::{oid::ObjectId, Document};
 
 #[derive(Clone, Debug)]
@@ -25,7 +20,7 @@ impl FromDoc for Payment {
 }
 
 impl Payment {
-	pub fn init(&self, db : &Database, booking_id : &ObjectId) {
+	pub fn init(&self, db : &SharedContext, booking_id : &ObjectId) {
 		match db.bookings_handel().update_one(
 			doc! {"_id" => booking_id.to_owned()},
 			doc! {"$set" => {
@@ -42,15 +37,14 @@ impl Payment {
 	}
 }
 
-graphql_object!(Payment: Database |&self| {
-	description: "The root order. This holds all details on an order
-including contact, address and postage information"
-
-	field transactions() -> Vec<Transaction> {self.transactions.to_owned()}
-	field proposed_method() -> String {self.proposed_method.to_string()}
-	field ticket_price() -> f64 {self.ticket_price}
-
-});
+/// The root order. This holds all details on an order
+///including contact, address and postage information
+#[juniper::graphql_object(Context = SharedContext)]
+impl Payment {
+	fn transactions(&self) -> Vec<Transaction> { self.transactions.to_owned() }
+	fn proposed_method(&self) -> String { self.proposed_method.to_string() }
+	fn ticket_price(&self) -> f64 { self.ticket_price }
+}
 
 #[derive(juniper::GraphQLEnum, Copy, Clone, Debug)]
 pub enum TransactionMethod {
@@ -118,8 +112,8 @@ impl FromDoc for Transaction {
 	}
 }
 
-graphql_object!(Transaction: Database |&self| {
-	field value() -> f64 {self.value}
-	field method() -> TransactionMethod {self.method}
-
-});
+#[juniper::graphql_object(Context=SharedContext)]
+impl Transaction {
+	fn value(&self) -> f64 { self.value }
+	fn method(&self) -> TransactionMethod { self.method }
+}

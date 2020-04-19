@@ -32,47 +32,6 @@ services:
          - ./admin/coverage/:/usr/src/coverage
       environment:
          NODE_ENV: ${MMT19_ENV}
-   backend:
-      build: backend/.
-      restart: always
-      ports:
-         - 3010:3000
-      networks:
-         - mmt-dmz
-      volumes:
-         - ./backend/app:/usr/src/app/app
-         - ./backend/config:/usr/src/app/config
-         - ./backend/test:/usr/src/app/test
-         - ./backend/db:/usr/src/app/db
-         - ./backend/tasks:/usr/src/app/tasks
-         - ./backend/public:/usr/src/public
-         - ./backend/qrs:/usr/src/app/app/assets/images/qr/
-      environment:
-         RAILS_ENV: ${MMT19_ENV}
-         DB_URL: ${MMT19_DB_URL}
-         DB_MASTER: postgres
-         DB_MASTER_PASSWORD: ${MMT19_DB_POSTGRES_PASSWORD}
-         DB_PASSWORD: ${MMT19_DB_DEV_PASSWORD}
-         DB_USER: ${MMT19_DB_DEV_USER}
-         DB_TEST_NAME: ${MMT19_DB_DEV_USER}
-         MAILGUN_DEV_KEY: ${MMT19_MAILGUN_DEV_KEY}
-         MAILGUN_DEV_DOMAIN: ${MMT19_MAILGUN_DEV_DOMAIN}
-   backdb:
-      build: backend/.
-      networks:
-         - mmt-dmz
-      volumes:
-         - ./backend/db:/usr/src/app/db
-      environment:
-         RAILS_ENV: ${MMT19_ENV}
-         DB_URL: ${MMT19_DB_URL}
-         DB_MASTER: postgres
-         DB_MASTER_PASSWORD: ${MMT19_DB_POSTGRES_PASSWORD}
-         DB_PASSWORD: ${MMT19_DB_DEV_PASSWORD}
-         DB_USER: ${MMT19_DB_DEV_USER}
-         DB_TEST_NAME: ${MMT19_DB_DEV_USER}
-         MAILGUN_DEV_KEY: ${MMT19_MAILGUN_DEV_KEY}
-         MAILGUN_DEV_DOMAIN: ${MMT19_MAILGUN_DEV_DOMAIN}
    rego-api:
       build: rego-api/.
       command: cargo watch -d0.1 -x run

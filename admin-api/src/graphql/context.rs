@@ -1,11 +1,12 @@
-use crate::db::PrimaryDb;
+use crate::{auth::AdminUser, db::PrimaryDb};
 use mongodb::{coll::Collection, db::ThreadedDatabase};
 
-pub struct Database {
+pub struct SharedContext {
 	pub connection : PrimaryDb,
+	pub auth :       AdminUser,
 }
 
-impl Database {
+impl SharedContext {
 	pub fn bookings_handel(&self) -> Collection { self.connection.collection("bookings") }
 	pub fn users_handel(&self) -> Collection { self.connection.collection("users") }
 	pub fn tickets_handel(&self) -> Collection { self.connection.collection("tickets") }
@@ -42,4 +43,4 @@ impl Database {
 	}
 }
 
-impl juniper::Context for Database {}
+impl juniper::Context for SharedContext {}

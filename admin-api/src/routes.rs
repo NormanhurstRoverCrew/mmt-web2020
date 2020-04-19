@@ -1,30 +1,41 @@
 use rocket::{get, post, response::content, State};
 
-use juniper::RootNode;
+use juniper::{EmptySubscription, RootNode};
 
 use crate::{
+	auth::AdminUser,
 	db::PrimaryDb,
-	graphql::{context::Database, mutation_root::MutationRoot, query_root::QueryRoot},
+	graphql::{context::SharedContext, mutation_root::MutationRoot, query_root::QueryRoot},
 };
 
-pub type Schema = RootNode<'static, QueryRoot, MutationRoot>;
+pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<SharedContext>>;
+
+pub fn schema() -> Schema {
+	Schema::new(
+		QueryRoot,
+		MutationRoot,
+		EmptySubscription::<SharedContext>::new(),
+	)
+}
 
 #[get("/")]
 pub fn index() -> &'static str { "Hello, world!" }
 
 #[get("/")]
-pub fn graphiql() -> content::Html<String> { juniper_rocket::graphiql_source("/graphql") }
+pub fn graphiql() -> content::Html<String> { juniper_rocket::graphiql_source("/graphql", None) }
 
 #[get("/graphql?<request>")]
 pub fn get_graphql_handler(
 	context : PrimaryDb,
 	request : juniper_rocket::GraphQLRequest,
 	schema : State<Schema>,
+	admin : AdminUser,
 ) -> juniper_rocket::GraphQLResponse {
-	request.execute(
-		&schema,
-		&Database {
+	request.execute_sync(
+		schema.inner(),
+		&SharedContext {
 			connection : context,
+			auth :       admin,
 		},
 	)
 }
@@ -34,11 +45,13 @@ pub fn post_graphql_handler(
 	context : PrimaryDb,
 	request : juniper_rocket::GraphQLRequest,
 	schema : State<Schema>,
+	admin : AdminUser,
 ) -> juniper_rocket::GraphQLResponse {
-	request.execute(
-		&schema,
-		&Database {
+	request.execute_sync(
+		schema.inner(),
+		&SharedContext {
 			connection : context,
+			auth :       admin,
 		},
 	)
 }

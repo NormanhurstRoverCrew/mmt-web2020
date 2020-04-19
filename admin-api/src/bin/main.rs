@@ -4,9 +4,10 @@ use rocket::routes;
 
 use libmmtapi::{
 	db::PrimaryDb,
-	graphql::{mutation_root::MutationRoot, query_root::QueryRoot},
-	routes::{self, Schema},
+	routes::{self, schema},
 };
+
+use libmmtapi::auth::Jwks;
 
 fn main() {
 	// let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:8080"]);
@@ -26,10 +27,14 @@ fn main() {
 		_ => panic!("Cors header not set up"),
 	};
 
+	let jwks = Jwks::get().expect("Could not get JWKS");
+	dbg!(&jwks);
+
 	rocket::ignite()
 		.attach(cors)
 		.attach(PrimaryDb::fairing())
-		.manage(Schema::new(QueryRoot, MutationRoot))
+		.manage(schema())
+		.manage(jwks)
 		.mount(
 			"/",
 			routes![

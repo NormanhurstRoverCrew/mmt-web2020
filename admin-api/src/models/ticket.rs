@@ -1,6 +1,6 @@
 use crate::{
 	db::{helpers as DBHelper, FromDoc},
-	graphql::context::Database,
+	graphql::context::SharedContext,
 	models::{utils::*, Booking, User, UserUpdate},
 };
 use juniper::ID;
@@ -38,7 +38,7 @@ impl Ticket {
 
 	pub fn get_user_id_opt(&self) -> Option<ObjectId> { ObjectId::with_string(&self.user_id).ok() }
 
-	pub fn get_user(&self, db : &Database) -> Option<User> {
+	pub fn get_user(&self, db : &SharedContext) -> Option<User> {
 		DBHelper::find::<User>(
 			&db.users_handel(),
 			doc! {
@@ -47,7 +47,7 @@ impl Ticket {
 		)
 	}
 
-	pub fn delete(&self, db : &Database) -> bool {
+	pub fn delete(&self, db : &SharedContext) -> bool {
 		db.users_handel()
 			.delete_one(
 				doc! {
@@ -76,12 +76,13 @@ impl FromDoc for Ticket {
 	}
 }
 
-graphql_object!(Ticket: Database |&self| {
+#[juniper::graphql_object(Context = SharedContext)]
+impl Ticket {
 	// object: "Contact Details of the person making the purchase"
 
-	field id() -> ID { ID::from(self.id.to_owned()) }
+	fn id(&self) -> ID { ID::from(self.id.to_owned()) }
 
-	field booking() -> Option<Booking> { self.get_booking() }
+	fn booking(&self) -> Option<Booking> { self.get_booking() }
 
-	field user(&exec) -> Option<User> { self.get_user(exec.context()) }
-});
+	fn user(&self, context : &SharedContext) -> Option<User> { self.get_user(context) }
+}

@@ -1,7 +1,7 @@
 use crate::{
 	db::{helpers as DBHelper, FromDoc},
-	graphql::context::Database,
-	models::{utils::*, Payment, Ticket, Transaction, User},
+	graphql::context::SharedContext,
+	models::{utils::*, Payment, Ticket, User},
 };
 use juniper::ID;
 use mongodb::{oid::ObjectId, Document};
@@ -39,7 +39,7 @@ impl FromDoc for BookingUserOnly {
 }
 
 impl Booking {
-	pub fn get_tickets(&self, db : &Database) -> Vec<Ticket> {
+	pub fn get_tickets(&self, db : &SharedContext) -> Vec<Ticket> {
 		let tickets = db.tickets_handel();
 
 		let tickets : Vec<Ticket> = DBHelper::search::<Ticket>(
@@ -52,7 +52,7 @@ impl Booking {
 		tickets
 	}
 
-	pub fn get_user(&self, db : &Database) -> Option<User> {
+	pub fn get_user(&self, db : &SharedContext) -> Option<User> {
 		let bookings = db.bookings_handel();
 		let booking = match DBHelper::get::<BookingUserOnly>(
 			&bookings,
@@ -67,26 +67,29 @@ impl Booking {
 			&ObjectId::with_string(&booking.user_id).unwrap(),
 		)
 	}
+
+	pub fn delete(&self, db : &SharedContext) -> bool {
+		for ticket in &self.tickets {
+			ticket.delete(&db);
+		}
+
+		db.bookings_handel()
+            .delete_one(doc! { "_id" => ObjectId::with_string(&self.id).expect("Booking id could no be converted to ObjectID") }, None).is_ok()
+	}
 }
 
-graphql_object!(Booking: Database |&self| {
-	description: "The root order. This holds all details on an order
-including contact, address and postage information"
+#[juniper::graphql_object(
+    Context = SharedContext,
+)]
+impl Booking {
+	fn id(&self) -> ID { ID::from(self.id.to_owned()) }
 
-	field id() -> ID { ID::from(self.id.to_owned()) }
-
-	field idn() -> i32 { self.no }
+	fn idn(&self) -> i32 { self.no }
 
 	/// Contact details
-	field user(&exec) -> Option<User> {
-		self.get_user(exec.context())
-	}
+	fn user(&self, context : &SharedContext) -> Option<User> { self.get_user(context) }
 
-	field tickets(&exec) -> Vec<Ticket> {
-		self.get_tickets(exec.context())
-	}
+	fn tickets(&self, context : &SharedContext) -> Vec<Ticket> { self.get_tickets(context) }
 
-	field payment(&exec) -> Payment {
-		self.payment.to_owned()
-	}
-});
+	fn payment(&self) -> Payment { self.payment.to_owned() }
+}

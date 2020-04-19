@@ -106,7 +106,7 @@ const ConfirmEmail = ({ classes }) => {
 						</Typography>
 						<Typography className={classNames(classes.paragraphGap)}>
 							Thanks for registering. We’ve sent you an email from{" "}
-							<b>bookings@***REMOVED***</b> to <b>{email}</b>. Please click on
+							<b>bookings@normorovers.com</b> to <b>{email}</b>. Please click on
 							the link in your email to finalise your tickets.
 						</Typography>
 						<Typography

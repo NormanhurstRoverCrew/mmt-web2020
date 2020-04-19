@@ -2,7 +2,7 @@ import React from 'react';
 import {render} from 'react-dom';
 import * as Sentry from '@sentry/browser';
 import ApolloClient from 'apollo-boost';
-import { ApolloProvider } from '@apollo/react-hooks';
+import {ApolloProvider} from '@apollo/react-hooks';
 import {BrowserRouter} from 'react-router-dom';
 
 Sentry.init({
@@ -18,20 +18,28 @@ window.axios = axios;
 import 'style.scss';
 
 const apolloClient = new ApolloClient({
-		uri: "http://localhost:8083/graphql",
+	uri: 'http://localhost:8083/graphql',
+	request: operation => {
+		const token = JSON.parse(localStorage.getItem('access_token'));
+		operation.setContext({
+			headers: {
+				authorization: token ? `Bearer ${token}` : '',
+			},
+		});
+	},
 });
 
 render(
-		<BrowserRouter>
-			<ApolloProvider client={apolloClient}>
-				<App
-					browser={{
-						window: window,
-						localStorage: localStorage,
-						history: history,
-					}}
-				/>
-			</ApolloProvider>
-		</BrowserRouter>,
+	<BrowserRouter>
+		<ApolloProvider client={apolloClient}>
+			<App
+				browser={{
+					window: window,
+					localStorage: localStorage,
+					history: history,
+				}}
+			/>
+		</ApolloProvider>
+	</BrowserRouter>,
 	document.getElementById('root'),
 );

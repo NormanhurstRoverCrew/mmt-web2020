@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import React, {Component, useContext} from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import {withStyles} from '@material-ui/core/styles';
@@ -18,9 +18,11 @@ import {
 } from '@material-ui/core';
 import Ticket from 'views/tickets/Ticket';
 
-import {bookingsActions} from 'actions/bookings.actions';
+import {BookingContext} from "context/BookingContext";
 
-export const Booking = ({classes, booking, deleteBooking}) => {
+export const Booking = ({classes, booking }) => {
+		const {deleteBooking} = useContext(BookingContext);
+
 	const {tickets, user} = booking;
 
 	const deleteBookingHandler = e => {
@@ -31,7 +33,7 @@ export const Booking = ({classes, booking, deleteBooking}) => {
 
 	const renderedTickets = tickets.map(ticket => {
 		return (
-			<Grid item xs={6} lg={3} md={2} key={ticket.id}>
+			<Grid item xs={6} lg={4} md={3} key={ticket.id}>
 				<Ticket ticket={ticket} />
 			</Grid>
 		);
