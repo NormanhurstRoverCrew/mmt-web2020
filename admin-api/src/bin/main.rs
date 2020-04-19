@@ -10,6 +10,8 @@ use libmmtapi::{
 use libmmtapi::auth::Jwks;
 
 fn main() {
+	let _guard = sentry::init(std::env::var("SENTRY_ADDRESS").unwrap());
+	sentry::integrations::panic::register_panic_handler();
 	// let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:8080"]);
 
 	// You can also deserialize this
@@ -28,7 +30,6 @@ fn main() {
 	};
 
 	let jwks = Jwks::get().expect("Could not get JWKS");
-	dbg!(&jwks);
 
 	rocket::ignite()
 		.attach(cors)

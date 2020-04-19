@@ -78,6 +78,7 @@ services:
          MAILGUN_USER: ${MMT20_MAILGUN_USER}
          MAILGUN_PASS: ${MMT20_MAILGUN_PASS}
          EMAIL_RETURN: ${MMT20_EMAIL_RETURN}
+         SENTRY_ADDRESS: ${MMT20_SENTRY_ADMIN_API}
    nginx:
       build: ./nginx
       restart: always
