@@ -23,7 +23,7 @@ juniper= { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f126
 # juniper_rocket = "0.5.0"
 juniper_rocket = { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
 rocket_cors = "0.5.2"
-stripe-rust = { version = "0.11.*", default-features = true }
+stripe-rust = { version = "0.12.1", default-features = false, features = ["blocking", "checkout"] }
 rand = "0.7"
 lettre = { git = "https://github.com/lettre/lettre" }
 email = { version = "^0.0.20" }

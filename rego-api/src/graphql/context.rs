@@ -1,11 +1,13 @@
 use crate::db::PrimaryDb;
 use mongodb::{coll::Collection, db::ThreadedDatabase};
+use stripe::Client;
 
-pub struct Database {
+pub struct CustomContext {
 	pub connection : PrimaryDb,
+	pub stripe :     Client,
 }
 
-impl Database {
+impl CustomContext {
 	pub fn bookings_handel(&self) -> Collection { self.connection.collection("bookings") }
 	pub fn users_handel(&self) -> Collection { self.connection.collection("users") }
 	pub fn tickets_handel(&self) -> Collection { self.connection.collection("tickets") }
@@ -42,4 +44,4 @@ impl Database {
 	}
 }
 
-impl juniper::Context for Database {}
+impl juniper::Context for CustomContext {}

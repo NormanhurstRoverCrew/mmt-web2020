@@ -55,6 +55,7 @@ services:
          MAILGUN_USER: ${MMT20_MAILGUN_USER}
          MAILGUN_PASS: ${MMT20_MAILGUN_PASS}
          EMAIL_RETURN: ${MMT20_EMAIL_RETURN}
+         STRIPE_API_KEY: ${MMT20_STRIPE_API_KEY}
    admin-api:
       build: rego-api/.
       command: cargo watch -d0.1 -x run
@@ -79,6 +80,7 @@ services:
          MAILGUN_PASS: ${MMT20_MAILGUN_PASS}
          EMAIL_RETURN: ${MMT20_EMAIL_RETURN}
          SENTRY_ADDRESS: ${MMT20_SENTRY_ADMIN_API}
+         STRIPE_API_KEY: ${MMT20_STRIPE_API_KEY}
    nginx:
       build: ./nginx
       restart: always

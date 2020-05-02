@@ -1,6 +1,6 @@
 use crate::{
 	db::{helpers as DBHelper, FromDoc},
-	graphql::context::Database,
+	graphql::context::CustomContext,
 	models::{utils::*, Booking},
 };
 use juniper::ID;
@@ -22,7 +22,7 @@ impl FromDoc for Payment {
 }
 
 impl Payment {
-	pub fn init(db : &Database, booking_id : &ObjectId) {
+	pub fn init(db : &CustomContext, booking_id : &ObjectId) {
 		match db.bookings_handel().update_one(
 			doc! {"_id" => booking_id.to_owned()},
 			doc! {"$set" => {
@@ -41,11 +41,11 @@ impl Payment {
 	}
 }
 
-graphql_object!(Payment: Database |&self| {
-	description: "The root order. This holds all details on an order
-including contact, address and postage information"
-
-	field id() -> ID { ID::from(self.id.to_owned()) }
-	field no() -> i32 { self.no}
-
-});
+// graphql_object!(Payment: CustomContext |&self| {
+// 	description: "The root order. This holds all details on an order
+// including contact, address and postage information"
+//
+// 	field id() -> ID { ID::from(self.id.to_owned()) }
+// 	field no() -> i32 { self.no}
+//
+// });

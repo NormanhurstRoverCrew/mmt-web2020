@@ -39,8 +39,6 @@ const Register = ({ classes }) => {
 
 	const { updateUserId } = useContext(BookingContext);
 
-	if (error) return <>{error}</>;
-
 	useEffect(() => {
 		console.log(loading, error, data);
 		if (!loading && !error && data) {
@@ -50,6 +48,8 @@ const Register = ({ classes }) => {
 			history.push("/confirm_email");
 		}
 	}, [data]);
+
+	if (error) return <>{error}</>;
 
 	return (
 		<Theme shiftLeft>

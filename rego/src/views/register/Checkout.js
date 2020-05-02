@@ -1,4 +1,4 @@
-import React, { Component, useEffect, useContext } from "react";
+import React, { Component, useEffect, useContext, useState } from "react";
 import {
 	Typography,
 	Button,
@@ -17,15 +17,37 @@ import Theme from "components/theme/Theme";
 import Norse from "components/theme/Norse";
 import TicketBasics from "components/tickets/TicketBasics";
 import Eft from "components/payment/Eft";
-import Stripe from "components/payment/Stripe";
-import { Elements } from "react-stripe-elements";
 import Cash from "components/payment/Cash";
 import CheckoutSummary from "components/booking/CheckoutSummary";
 
 import { BookingContext } from "context/BookingContext";
 
-const Checkout = ({ classes, tickets }) => {
-	const { checkoutMethod, updateCheckoutMethod } = useContext(BookingContext);
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import Stripe from "components/payment/Stripe";
+
+// Make sure to call `loadStripe` outside of a component’s render to avoid
+// recreating the `Stripe` object on every render.
+const stripePromise = loadStripe("pk_test_3jpeKc8apKbPVGnnNoyY51GK00N6X69Wap");
+
+const Checkout = ({ classes }) => {
+	const { checkoutMethod, updateCheckoutMethod, tickets, bookingId } = useContext(
+		BookingContext
+	);
+
+	const [billing_details, updateBD] = useState();
+
+	useEffect(() => {
+		if (tickets && tickets.length > 0) {
+			console.log(tickets);
+			const { name, email, mobile: phone } = tickets[0].user;
+			updateBD({
+				name,
+				email,
+				phone,
+			});
+		}
+	}, [tickets]);
 
 	const history = useHistory();
 
@@ -65,9 +87,11 @@ const Checkout = ({ classes, tickets }) => {
 							value={checkoutMethod}
 							onChange={handlePaymentOptionChange}
 						>
-							{/* <FormControlLabel value="stripe"
-									control={<Radio />}
-									label="Card payment / Apple Pay / Google Pay via Stripe" /> */}
+							<FormControlLabel
+								value="stripe"
+								control={<Radio />}
+								label="Card payment / Apple Pay / Google Pay via Stripe"
+							/>
 							<FormControlLabel
 								value="eft"
 								control={<Radio />}
@@ -89,8 +113,8 @@ const Checkout = ({ classes, tickets }) => {
 						)}
 						{checkoutMethod == "stripe" && (
 							<Grid item>
-								<Elements>
-									<Stripe />
+								<Elements stripe={stripePromise}>
+									<Stripe billing_details={billing_details} bookingId={bookingId} />
 								</Elements>
 								<Thankyou classes={classes} gotoHome={gotoHome} />
 							</Grid>

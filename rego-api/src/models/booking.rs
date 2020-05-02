@@ -1,6 +1,6 @@
 use crate::{
 	db::{helpers as DBHelper, FromDoc},
-	graphql::context::Database,
+	graphql::context::CustomContext,
 	models::{utils::*, Payment, Ticket, User},
 };
 use juniper::ID;
@@ -39,7 +39,7 @@ impl FromDoc for BookingUserOnly {
 impl Booking {
 	// Create a new booking with a booking user and 1 ticket containing the booking
 	// user.
-	pub fn create(db : &Database, user : &User) -> Option<ObjectId> {
+	pub fn create(db : &CustomContext, user : &User) -> Option<ObjectId> {
 		let bookings = db.bookings_handel();
 		let seq = db.index("bookings");
 		dbg!(seq);
@@ -78,7 +78,7 @@ impl Booking {
 		booking_id
 	}
 
-	pub fn get_tickets(&self, db : &Database) -> Vec<Ticket> {
+	pub fn get_tickets(&self, db : &CustomContext) -> Vec<Ticket> {
 		let tickets = db.tickets_handel();
 
 		let tickets : Vec<Ticket> = DBHelper::search::<Ticket>(
@@ -91,7 +91,7 @@ impl Booking {
 		tickets
 	}
 
-	pub fn get_user(&self, db : &Database) -> User {
+	pub fn get_user(&self, db : &CustomContext) -> User {
 		let bookings = db.bookings_handel();
 		let booking = match DBHelper::get::<BookingUserOnly>(
 			&bookings,
@@ -109,20 +109,17 @@ impl Booking {
 	}
 }
 
-graphql_object!(Booking: Database |&self| {
-	description: "The root order. This holds all details on an order
-including contact, address and postage information"
+#[juniper::graphql_object(Context = CustomContext)]
+impl Booking {
+	/// The root order. This holds all details on an order
+	/// including contact, address and postage information
 
-	field id() -> ID { ID::from(self.id.to_owned()) }
+	fn id(&self) -> ID { ID::from(self.id.to_owned()) }
 
-	field no() -> i32 { self.no }
+	fn no(&self) -> i32 { self.no }
 
 	/// Contact details
-	field user(&exec) -> User {
-		self.get_user(exec.context())
-	}
+	fn user(&self, context : &CustomContext) -> User { self.get_user(context) }
 
-	field tickets(&exec) -> Vec<Ticket> {
-		self.get_tickets(exec.context())
-	}
-});
+	fn tickets(&self, context : &CustomContext) -> Vec<Ticket> { self.get_tickets(context) }
+}

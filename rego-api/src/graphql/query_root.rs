@@ -1,17 +1,17 @@
 use crate::{
 	db::helpers as DBHelper,
-	graphql::{context::Database, util::string_to_id},
+	graphql::{context::CustomContext, util::string_to_id},
 	models::{Booking, User},
 };
 use juniper::{graphql_value, FieldResult};
 
 pub struct QueryRoot;
-#[juniper::object(
-    Context = Database,
+#[juniper::graphql_object(
+    Context = CustomContext,
 )]
 impl QueryRoot {
 	/// All bookings
-	fn booking(context : &Database, id : String) -> FieldResult<Booking> {
+	fn booking(context : &CustomContext, id : String) -> FieldResult<Booking> {
 		let bookings = context.bookings_handel();
 		let id = match string_to_id(&id) {
 			Ok(id) => id,
@@ -34,7 +34,7 @@ impl QueryRoot {
 	}
 
 	/// Get a user
-	fn booking_from_user(context : &Database, id : String) -> FieldResult<Booking> {
+	fn booking_from_user(context : &CustomContext, id : String) -> FieldResult<Booking> {
 		let id = match string_to_id(&id) {
 			Ok(id) => id,
 			Err(e) => return Err(e),

@@ -2,7 +2,7 @@ import React from "react";
 import {withStyles} from "@material-ui/core/styles";
 import classNames from "classnames";
 import CssBaseline from "@material-ui/core/CssBaseline";
-import {MuiThemeProvider, createMuiTheme} from "@material-ui/core/styles";
+import {ThemeProvider, createMuiTheme} from "@material-ui/core/styles";
 import {MuiPickersUtilsProvider} from "@material-ui/pickers";
 import MomentUtils from "@date-io/moment";
 
@@ -77,12 +77,12 @@ export class Root extends React.Component {
 	render() {
 		return (
 			<div className={classNames(this.classes.root)}>
-				<MuiThemeProvider theme={theme}>
+				<ThemeProvider theme={theme}>
 					<MuiPickersUtilsProvider utils={MomentUtils}>
 						<CssBaseline />
 						<Content />
 					</MuiPickersUtilsProvider>
-				</MuiThemeProvider>
+				</ThemeProvider>
 			</div>
 		);
 	}

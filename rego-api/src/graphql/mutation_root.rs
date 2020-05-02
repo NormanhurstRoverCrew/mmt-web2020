@@ -2,7 +2,7 @@ use crate::{
 	db::helpers as DBHelper,
 	email::MyEmail,
 	graphql::{
-		context::Database,
+		context::CustomContext,
 		util::{bson_to_id, string_to_id},
 	},
 	models::{BasicUser, Booking, Ticket, TicketUpdate, User},
@@ -10,14 +10,15 @@ use crate::{
 use juniper::{graphql_value, FieldError, FieldResult};
 use mongodb::{oid::ObjectId, Bson, Document};
 use rand::{distributions::Alphanumeric, Rng};
-use std::iter::Iterator;
+use std::{iter::Iterator, str::FromStr};
+use stripe::{PaymentMethod, PaymentMethodId};
 
 pub struct MutationRoot;
-#[juniper::object(
-    Context = Database
+#[juniper::graphql_object(
+    Context = CustomContext
 )]
 impl MutationRoot {
-	fn newUser(context : &Database, user : BasicUser) -> FieldResult<Option<User>> {
+	fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
 		let users = context.users_handel();
 
 		let random_code = rand::thread_rng()
@@ -76,7 +77,7 @@ impl MutationRoot {
 		Ok(Some(user))
 	}
 
-	fn verifyUser(context : &Database, id : String, code : String) -> FieldResult<User> {
+	fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {
 		let users = context.users_handel();
 		let id = match string_to_id(&id) {
 			Ok(id) => id,
@@ -131,7 +132,7 @@ impl MutationRoot {
 	/// Take in the details of a user, how they would like to receive their
 	/// order and possibly their address.
 	fn newBooking(
-		context : &Database,
+		context : &CustomContext,
 		name : String,
 		email : String,
 		mobile : String,
@@ -250,7 +251,7 @@ impl MutationRoot {
 	}
 
 	fn add_tickets_to_booking(
-		context : &Database,
+		context : &CustomContext,
 		booking_id : String,
 		users : Vec<BasicUser>,
 	) -> FieldResult<Booking> {
@@ -316,7 +317,7 @@ impl MutationRoot {
 	}
 
 	fn update_tickets(
-		context : &Database,
+		context : &CustomContext,
 		tickets : Vec<TicketUpdate>,
 	) -> FieldResult<Vec<Ticket>> {
 		tickets
@@ -378,5 +379,19 @@ impl MutationRoot {
 			.collect::<Vec<Ticket>>();
 
 		Ok(tickets)
+	}
+
+	fn attachPaymentMethodToBooking(
+		context : &CustomContext,
+		booking_id : String,
+		payment_method_id : String,
+	) -> FieldResult<bool> {
+		dbg!(&booking_id);
+		let pmid = PaymentMethodId::from_str(&payment_method_id).unwrap();
+
+		// let pm = PaymentMethod::retrieve(&context.stripe, &pmid, &[]);
+		// dbg!(pm);
+
+		Ok(true)
 	}
 }

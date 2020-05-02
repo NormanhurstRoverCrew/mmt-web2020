@@ -1,7 +1,6 @@
 import React from "react";
 import { render } from "react-dom";
 import { BrowserRouter } from "react-router-dom";
-import { StripeProvider } from "react-stripe-elements";
 import ReactGA from "react-ga";
 import * as Sentry from "@sentry/browser";
 
