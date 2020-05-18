@@ -5,7 +5,7 @@ import { useQuery, useLazyQuery } from "@apollo/react-hooks";
 
 export const BookingContext = createContext();
 
-const PRICE = 40.0;
+const TICKET_PRICE = 40.0;
 
 const GET_BOOKING = gql`
 	query GetBooking($id: String!) {
@@ -23,6 +23,12 @@ const GET_BOOKING = gql`
 				}
 			}
 		}
+	}
+`;
+
+const GET_TICKET_PRICE = gql`
+	{
+		ticketPrice
 	}
 `;
 
@@ -53,6 +59,8 @@ const BookingContextProvider = ({ children }) => {
 	const [tickets, _updateTickets] = useState([]);
 	const [checkoutMethod, updateCheckoutMethod] = useState("");
 	const [bookingNo, updateBookingNo] = useState(99999999999999);
+	const [ticketPrice, updateTicketPrice] = useState(TICKET_PRICE);
+	const { data: getPriceData } = useQuery(GET_TICKET_PRICE);
 
 	const updateUserId = (id) => {
 		if (id) {
@@ -81,7 +89,7 @@ const BookingContextProvider = ({ children }) => {
 	}, [bookingData]);
 
 	const price = () => {
-		return tickets.length * PRICE;
+		return tickets.length * ticketPrice;
 	};
 
 	const updateTickets = (tickets) => {
@@ -103,6 +111,12 @@ const BookingContextProvider = ({ children }) => {
 		var t = _.filter(tickets, (ticket) => ticket.id !== uid);
 		updateTickets(t);
 	};
+
+	useEffect(() => {
+		if (getPriceData) {
+			updateTicketPrice(getPriceData.ticketPrice);
+		}
+	}, [getPriceData]);
 
 	const obj = {
 		get userId() {

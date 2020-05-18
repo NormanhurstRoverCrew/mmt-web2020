@@ -46,8 +46,8 @@ services:
          - ./rego-api/Cargo.lock:/e/Cargo.lock
          - ./rego-api/Rocket.toml:/e/Rocket.toml
          - ./rego-api/templates:/e/templates
-         - rustapitarget:/e/target
-         - rustapicargoregistry:/usr/local/cargo/registry
+         - regoapitarget:/e/target
+         - regoapicargoregistry:/usr/local/cargo/registry
       environment:
          ENVIRONMENT: development 
          MAILGUN_HELLO: ${MMT20_MAILGUN_HELLO}
@@ -70,8 +70,8 @@ services:
          - ./admin-api/Cargo.lock:/e/Cargo.lock
          - ./admin-api/Rocket.toml:/e/Rocket.toml
          - ./admin-api/templates:/e/templates
-         - rustapitarget:/e/target
-         - rustapicargoregistry:/usr/local/cargo/registry
+         - adminapitarget:/e/target
+         - adminapicargoregistry:/usr/local/cargo/registry
       environment:
          ENVIRONMENT: development 
          MAILGUN_HELLO: ${MMT20_MAILGUN_HELLO}
@@ -111,7 +111,11 @@ networks:
       external:
          name: proxy
 volumes:
-   rustapitarget:
+  regoapitarget:
       driver: local
-   rustapicargoregistry:
+  regoapicargoregistry:
+      driver: local
+  adminapitarget:
+      driver: local
+  adminapicargoregistry:
       driver: local

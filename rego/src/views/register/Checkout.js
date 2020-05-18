@@ -90,12 +90,12 @@ const Checkout = ({ classes }) => {
 							<FormControlLabel
 								value="stripe"
 								control={<Radio />}
-								label="Card payment / Apple Pay / Google Pay via Stripe"
+								label="Card payment via Stripe"
 							/>
 							<FormControlLabel
 								value="eft"
 								control={<Radio />}
-								label="Electronic Funds Transfer (EFT) ( Presale finished 5pm Wed 4th of September )"
+								label="Electronic Funds Transfer (EFT)"
 								/* disabled */
 							/>
 							<FormControlLabel

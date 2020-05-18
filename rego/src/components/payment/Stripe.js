@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Typography, Paper } from "@material-ui/core";
+import { Typography, Paper, Button } from "@material-ui/core";
 import { withStyles } from "@material-ui/core/styles";
 import classNames from "classnames";
 // import { injectStripe, PaymentRequestButtonElement, CardElement } from "react-stripe-elements";
@@ -33,16 +33,29 @@ const CARD_ELEMENT_OPTIONS = {
 
 const ATTACH_PAYMENT_METHOD = gql`
 	mutation AttachPaymentMethod($bookingId: String!, $paymentMethodId: String!) {
-		attachPaymentMethodToBooking(bookingId: $bookingId, paymentMethodId: $paymentMethodId)
+		attachStripePaymentMethodToBooking(
+			bookingId: $bookingId
+			paymentMethodId: $paymentMethodId
+		)
 	}
 `;
+
+const ConfirmStripe = ({ onClick }) => {
+	return (
+		<>
+			<Button onClick={onClick}>Confirm Payment</Button>
+		</>
+	);
+};
 
 export const Stripe = ({ billing_details, bookingId }) => {
 	const stripe = useStripe();
 	const elements = useElements();
 	const [error, setError] = useState();
 
-	const [attachPM, { data, loading, error: attachPMError }] = useMutation(ATTACH_PAYMENT_METHOD);
+	const [attachPM, { data, loading, error: attachPMError }] = useMutation(
+		ATTACH_PAYMENT_METHOD
+	);
 
 	const handleSubmit = async (event) => {
 		// We don't want to let default form submission happen here,
@@ -69,21 +82,44 @@ export const Stripe = ({ billing_details, bookingId }) => {
 			// Send the token to your server.
 			// This function does not exist yet; we will define it in the next step.
 			console.log(pm);
-				attachPM({variables: {
-						bookingId,
-						paymentMethodId: pm.paymentMethod.id,
-				}});
+			attachPM({
+				variables: {
+					bookingId,
+					paymentMethodId: pm.paymentMethod.id,
+				},
+			});
 		}
+	};
+
+	const [capturePayment, updateCapturePayment] = useState(false);
+	const [paymentIntentId, updatePaymentIntentId] = useState();
+	useEffect(() => {
+		if (data) {
+			updatePaymentIntentId(data.attachStripePaymentMethodToBooking);
+		}
+	}, [data]);
+
+	useEffect(() => {
+		if (paymentIntentId) {
+			updateCapturePayment(true);
+		}
+	}, [paymentIntentId]);
+
+	const confirmPayment = () => {
+		stripe.confirmCardPayment(paymentIntentId).then((result) => {
+			console.log(result);
+		});
 	};
 
 	return (
 		<>
 			<form onSubmit={handleSubmit}>
-				Card details
+				<Typography>Card details</Typography>
 				<CardElement options={CARD_ELEMENT_OPTIONS} />
 				<Typography>{error}</Typography>
-				<button disabled={!stripe}>Confirm order</button>
+				<Button disabled={!stripe} type="submit">Confirm order</Button>
 			</form>
+			{capturePayment && <ConfirmStripe onClick={() => confirmPayment()} />}
 		</>
 	);
 };
