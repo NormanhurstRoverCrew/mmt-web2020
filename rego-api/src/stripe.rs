@@ -31,6 +31,7 @@ pub fn create_checkout_session(quantity : i64) {
 			quantity,
 		}],
 	};
+
 	dbg!(&ccs);
 
 	let client = reqwest::blocking::Client::new();
@@ -41,5 +42,6 @@ pub fn create_checkout_session(quantity : i64) {
 			None as Option<&str>,
 		)
 		.form(&ccs);
+
 	dbg!(&req);
 }

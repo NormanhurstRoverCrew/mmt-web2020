@@ -1,86 +1,54 @@
 #![feature(decl_macro, proc_macro_hygiene)]
 
+use actix_cors::Cors;
+use actix_web::{http::header, middleware, web, App, HttpServer};
 use juniper::EmptySubscription;
-use rocket::routes;
-use std::io::Cursor;
+use mongodb::Client as Mongo;
 use stripe::Client;
 
 use libmmtapi::{
-	db::PrimaryDb,
 	graphql::{context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot},
-	routes::{self, Schema},
+	routes::{graphiql, graphql, Schema, stripe_hook},
 };
 
-pub struct CORS();
+#[actix_rt::main]
+async fn main() -> Result<(), std::io::Error> {
+	std::env::set_var("RUST_LOG", "actix_web=info");
+	env_logger::init();
 
-use rocket::{
-	fairing::{Fairing, Info, Kind},
-	http::{ContentType, Header, Method},
-	Request, Response,
-};
-#[rocket::async_trait]
-impl Fairing for CORS {
-	fn info(&self) -> Info {
-		Info {
-			name : "Add CORS headers to requests",
-			kind : Kind::Response,
-		}
-	}
+	let client = Mongo::with_uri_str("mongodb://db:27017/").await.unwrap();
+	let db = client.database("mmt_development");
 
-    async fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) {
-			response.set_header(Header::new(
-				"Access-Control-Allow-Origin",
-				"http://localhost:8080",
-			));
-			response.set_header(Header::new(
-				"Access-Control-Allow-Methods",
-				"POST, GET, OPTIONS",
-			));
-			response.set_header(Header::new("Access-Control-Allow-Headers", "Content-Type"));
-			response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
-	}
-}
+	let stripe = std::env::var("STRIPE_API_KEY").expect("Stripe Api Key");
+	let stripe = Client::new(stripe);
 
-fn main() {
-	// let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:8080"]);
+	// Create Juniper schema
+	let schema = std::sync::Arc::new(Schema::new(
+		QueryRoot,
+		MutationRoot,
+		EmptySubscription::<CustomContext>::new(),
+	));
 
-	// You can also deserialize this
-	let cors = match (rocket_cors::CorsOptions {
-		// allowed_origins,
-		// allowed_methods: vec![Method::Post].into_iter().map(From::from).collect(),
-		// allowed_headers: AllowedHeaders::some(&["Authorization", "Accept"]),
-		// allow_credentials: true,
-		send_wildcard : true,
-		..Default::default()
-	}
-	.to_cors())
-	{
-		Ok(c) => c,
-		_ => panic!("Cors header not set up"),
-	};
+	// Start http server
+	HttpServer::new(move || {
+		let cors = Cors::new()
+			.allowed_origin("http://localhost:8082")
+			.allowed_origin("http://localhost:8080")
+			.allowed_methods(vec!["GET", "POST", "OPTIONS"])
+			.allowed_headers(vec![header::CONTENT_TYPE])
+			.finish();
 
-	let stripe = Client::new(std::env::var("STRIPE_API_KEY").expect("Stripe Api Key"));
-
-	// libmmtapi::stripe::create_checkout_session(1);
-
-	rocket::ignite()
-		// .attach(cors)
-		.attach(CORS())
-		.attach(PrimaryDb::fairing())
-		.manage(Schema::new(
-			QueryRoot,
-			MutationRoot,
-			EmptySubscription::<CustomContext>::new(),
-		))
-		.manage(stripe)
-		.mount(
-			"/",
-			routes![
-				routes::index,
-				routes::get_graphql_handler,
-				routes::post_graphql_handler
-			],
-		)
-		.mount("/graphiql", routes![routes::graphiql])
-		.launch();
+		App::new()
+			.data(schema.clone())
+			.data(stripe.clone())
+			.data(db.clone())
+			.wrap(middleware::Logger::default())
+			.wrap(cors)
+			.service(web::resource("/graphql").route(web::post().to(graphql)))
+			.service(web::resource("/graphiql").route(web::get().to(graphiql)))
+			.service(web::resource("/stripe/hooks").route(web::post().to(stripe_hook)))
+	})
+	.bind("0.0.0.0:8000")?
+	.run()
+	.await
 }

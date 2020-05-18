@@ -5,5 +5,5 @@ mod user;
 pub mod utils;
 pub use booking::Booking;
 pub use payment::Payment;
-pub use ticket::{Ticket, TicketUpdate};
+pub use ticket::{Ticket, TicketUpdate, TICKET_PRICE};
 pub use user::{BasicUser, User};

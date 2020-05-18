@@ -1,18 +1,19 @@
-use crate::db::PrimaryDb;
-use mongodb::{coll::Collection, db::ThreadedDatabase};
+use bson::doc;
+use mongodb::{Collection, Database};
+use std::sync::Arc;
 use stripe::Client;
 
 pub struct CustomContext {
-	pub connection : PrimaryDb,
-	pub stripe :     Client,
+	pub db :     Arc<Database>,
+	pub stripe : Arc<Client>,
 }
 
 impl CustomContext {
-	pub fn bookings_handel(&self) -> Collection { self.connection.collection("bookings") }
-	pub fn users_handel(&self) -> Collection { self.connection.collection("users") }
-	pub fn tickets_handel(&self) -> Collection { self.connection.collection("tickets") }
-	pub fn index(&self, i : &str) -> i32 {
-		let indexes = self.connection.collection("indexes");
+	pub fn bookings_handel(&self) -> Collection { self.db.collection("bookings") }
+	pub fn users_handel(&self) -> Collection { self.db.collection("users") }
+	pub fn tickets_handel(&self) -> Collection { self.db.collection("tickets") }
+	pub async fn index(&self, i : &str) -> i32 {
+		let indexes = self.db.collection("indexes");
 		loop {
 			match indexes.find_one_and_update(
 				doc! {
@@ -24,7 +25,7 @@ impl CustomContext {
 					}
 				},
 				None,
-			) {
+			).await {
 				Ok(Some(doc)) => {
 					return doc.get_i32("seq").expect("Sequence Number");
 				},
@@ -37,6 +38,7 @@ impl CustomContext {
 							},
 							None,
 						)
+						.await
 						.expect("Insert new index");
 				},
 			};

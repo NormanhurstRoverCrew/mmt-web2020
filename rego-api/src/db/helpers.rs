@@ -1,39 +1,37 @@
-use crate::db::FromDoc;
-use mongodb::{coll::Collection, oid::ObjectId, ordered::OrderedDocument};
+use futures::StreamExt;
+use bson::{doc, oid::ObjectId, Document};
+use mongodb::Collection;
+use serde::Deserialize;
 
-pub fn all<T : FromDoc>(coll : &Collection) -> Vec<T> {
-	coll.find(None, None)
-		.unwrap()
-		.into_iter()
-		.filter_map(|item| match item {
-			Ok(item) => Some(T::from_doc(&item)),
-			Err(_) => None,
-		})
-		.collect()
+pub async fn all<'a, T : Deserialize<'a>>(coll : &'a Collection) -> Vec<T> {
+    coll.find(None, None).await.unwrap()
+        .filter_map(|item| async move {
+            item.ok()
+        })
+        .map(|doc| bson::from_bson(bson::Bson::Document(doc)).expect("Decode error"))
+        .collect()
+        .await
 }
 
-pub fn get<T : FromDoc>(coll : &Collection, id : &ObjectId) -> Option<T> {
-	match coll.find_one(
-		Some(doc! {
-			"_id" => id.to_owned(),
-		}),
-		None,
-	) {
-		Ok(Some(o)) => Some(T::from_doc(&o)),
-		_ => None,
-	}
+pub async fn get<'a, T : Deserialize<'a>>(coll : &'a Collection, id : &ObjectId) -> Option<T> {
+    find(coll, doc! {
+        "_id" => id,
+    }).await
 }
 
-pub fn find<T : FromDoc>(coll : &Collection, search : OrderedDocument) -> Option<T> {
-	match coll.find_one(Some(search), None) {
-		Ok(Some(o)) => Some(T::from_doc(&o)),
-		_ => None,
-	}
+pub async fn find<'a, T : Deserialize<'a>>(coll : &'a Collection, search : Document) -> Option<T> {
+	coll.find_one(Some(search), None)
+        .await
+        .expect("DB Error")
+        .map(|doc| bson::from_bson(bson::Bson::Document(doc)).expect("Decode error"))
 }
 
-pub fn search<T : FromDoc>(coll : &Collection, search : OrderedDocument) -> Vec<T> {
-	match coll.find(Some(search), None) {
-		Ok(o) => o.map(|d| T::from_doc(&d.unwrap())).collect(),
-		_ => vec![],
-	}
+pub async fn search<'a, T : Deserialize<'a>>(coll : &'a Collection, search : Document) -> Vec<T> {
+    coll.find(Some(search), None).await.unwrap()
+        .filter_map(|item| async move {
+            item.ok()
+        })
+        .map(|doc| bson::from_bson(bson::Bson::Document(doc)).expect("Decode error"))
+        .collect()
+        .await
 }

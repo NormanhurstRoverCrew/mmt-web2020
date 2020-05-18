@@ -1,90 +1,83 @@
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 use crate::{
 	db::helpers as DBHelper,
 	email::MyEmail,
-	graphql::{
-		context::CustomContext,
-		util::{bson_to_id, string_to_id},
-	},
+	graphql::{context::CustomContext, util::string_to_id},
 	models::{BasicUser, Booking, Ticket, TicketUpdate, User},
 };
+use bson::{doc, oid::ObjectId, Document};
 use juniper::{graphql_value, FieldError, FieldResult};
-use mongodb::{oid::ObjectId, Bson, Document};
-use rand::{distributions::Alphanumeric, Rng};
-use std::{iter::Iterator, str::FromStr};
-use stripe::{PaymentMethod, PaymentMethodId};
+use mongodb::results::InsertOneResult;
+use std::iter::Iterator;
 
 pub struct MutationRoot;
 #[juniper::graphql_object(
     Context = CustomContext
 )]
 impl MutationRoot {
-	fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
+	async fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
 		let users = context.users_handel();
 
-		let random_code = rand::thread_rng()
-			.sample_iter(&Alphanumeric)
-			.take(16)
-			.collect::<String>();
+        let user : User = user.into();
 
-		let result = users
-			.insert_one(
-				doc! {
-					"name" => &user.name,
-					"email" => &user.email,
-					"mobile" => &user.mobile,
-					"crew" => &user.crew,
-					"code" => random_code,
-				},
-				None,
-			)
-			.unwrap();
+        let doc = bson::to_bson(&user)?;
 
-		let user = match result.acknowledged {
-			true => match result.inserted_id {
-				Some(id) => match bson_to_id(&id) {
-					Ok(user_id) => match DBHelper::get::<User>(&users, user_id) {
-						Some(user) => user,
-						_ => {
-							return Err(juniper::FieldError::new(
-								"User does not exist",
-								graphql_value!({
-									"type": "NO_WHATEVER"
-								}),
-							))
-						},
-					},
-					Err(e) => return Err(e),
-				},
-				None => {
-					return Err(juniper::FieldError::new(
-						"User ID not created",
-						graphql_value!({"type": "ID_MISSING"}),
-					))
-				},
-			},
-			false => {
+        let result = match doc {
+            bson::Bson::Document(document) =>  users.insert_one(
+		    	document,
+		    	None,
+		    ),
+            _ => {
 				return Err(juniper::FieldError::new(
-					"User not created",
-					graphql_value!({"type": "INSERT_FAILED"}),
+					"Failed to create bew User",
+					graphql_value!({"type": "DB_ERROR"}),
+				))
+            }
+        };
+
+		let user_id = match result.await {
+			Ok(InsertOneResult {
+				inserted_id,
+			}) => inserted_id.as_object_id().unwrap().to_owned(),
+			Err(_) => {
+				return Err(juniper::FieldError::new(
+					"User ID not created",
+					graphql_value!({"type": "ID_MISSING"}),
+				))
+			},
+		};
+
+		let user = match DBHelper::get::<User>(&users, &user_id).await {
+			Some(user) => user,
+			_ => {
+				return Err(juniper::FieldError::new(
+					"User does not exist",
+					graphql_value!({
+						"type": "USER_NOT_FOUND"
+					}),
 				))
 			},
 		};
 
 		MyEmail::from_user(&user)
-			.verify_email()
-			.expect("Verification Email Not Sent...");
-
-		Ok(Some(user))
+			.verify_email().map(|_| Some(user))
+            .map_err(|_| juniper::FieldError::new(
+                    "Failed to send email",
+                    graphql_value!({
+                        "type": "EMAIL_FAIL"
+                    }),
+            ))
 	}
 
-	fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {
+	async fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {
 		let users = context.users_handel();
 		let id = match string_to_id(&id) {
 			Ok(id) => id,
 			Err(e) => return Err(e),
 		};
 
-		let mut user : User = match DBHelper::get(&users, &id) {
+		let mut user : User = match DBHelper::get(&users, &id).await {
 			Some(user) => user,
 			None => {
 				return Err(juniper::FieldError::new(
@@ -98,25 +91,7 @@ impl MutationRoot {
 
 		match user.is_code_valid(&code) {
 			Ok(()) => {
-				let users = context.users_handel();
-				let res = users.update_one(
-					doc! {
-						"_id" => id.to_owned()
-					},
-					doc! {
-						"$set" => {
-							"email_verified" => true,
-						},
-					},
-					None,
-				);
-
-				match res {
-					Ok(_) => {
-						user.email_verified = true;
-					},
-					_ => {},
-				};
+                user.set_email_verified(&context, true).await;
 			},
 			Err(e) => {
 				return Err(juniper::FieldError::new(
@@ -129,165 +104,43 @@ impl MutationRoot {
 		Ok(user)
 	}
 
-	/// Take in the details of a user, how they would like to receive their
-	/// order and possibly their address.
-	fn newBooking(
-		context : &CustomContext,
-		name : String,
-		email : String,
-		mobile : String,
-	) -> FieldResult<Option<Booking>> {
-		let bookings = context.bookings_handel();
-
-		let result = bookings
-			.insert_one(
-				doc! {
-					"user" => {
-						"name" => &name,
-						"email" => &email,
-						"mobile" => &mobile,
-					},
-				},
-				None,
-			)
-			.unwrap();
-
-		let id = result.inserted_id.unwrap_or(Bson::ObjectId(
-			ObjectId::new().expect("Converting mongoID to juniperID failed"),
-		));
-
-		let id = id.as_object_id().expect("Unwrap string").to_string();
-
-		// let mut params = stripe::PaymentIntentCreateParams::new(
-		// 	SCARVE_PRICE * quantity as u64 + post_price,
-		// 	stripe::Currency::AUD,
-		// );
-
-		// let desc = format!(
-		// 	"{}: Scarves x{} for {}",
-		// 	name,
-		// 	&quantity,
-		// 	match delivery_method {
-		// 		CollectionMethod::Pickup => "Pickup",
-		// 		CollectionMethod::Post => "Postage",
-		// 	}
-		// );
-
-		// params.description = Some(&desc);
-
-		// let cus = String::from(&email);
-		// let mut meta = stripe::Metadata::new();
-		// meta.insert("email".to_string(), cus);
-		// meta.insert("quantity".to_string(), quantity.to_string());
-		// params.metadata = Some(meta);
-
-		// let pi = match stripe::PaymentIntent::create(&stripe_client, params) {
-		// 	Ok(pi) => {
-		// 		orders
-		// 			.update_one(
-		// 				doc! {"_id" => ObjectId::with_string(&id).unwrap()},
-		// 				doc! {
-		// 					"$set" => {
-		// 						"payment" => {
-		// 							"stripe" => {
-		// 								"pi" => pi.id.as_str(),
-		// 							}
-		// 						}
-		// 					}
-		// 				},
-		// 				None,
-		// 			)
-		// 			.expect("Updating Order failed");
-		// 		pi
-		// 	},
-		// 	_ => {
-		// 		return Err(juniper::FieldError::new(
-		// 			"Failed to create payment intent",
-		// 			graphql_value!({
-		// 				"type": "NO_WHATEVER"
-		// 			}),
-		// 		))
-		// 	},
-		// };
-
-		let id = match mongodb::oid::ObjectId::with_string(&id) {
-			Ok(oid) => oid,
-			Err(_) => {
-				return Err(juniper::FieldError::new(
-					"UID is not valid",
-					graphql_value!({
-						"type": "INVALID_UID"
-					}),
-				))
-			},
-		};
-
-		let mut booking = match DBHelper::get::<Booking>(&bookings, &id) {
-			Some(order) => order,
-			_ => {
-				return Err(juniper::FieldError::new(
-					"Booking does not exist",
-					graphql_value!({
-						"type": "NO_WHATEVER"
-					}),
-				))
-			},
-		};
-
-		// let mut payment = &mut order
-		// 	.payment
-		// 	.as_mut()
-		// 	.expect("Unwrapping mutable payment failed");
-
-		// let mut stripe = &mut payment
-		// 	.stripe
-		// 	.as_mut()
-		// 	.expect("Unwrapping mutable stripe payment failed");
-
-		// stripe.client_secret = Some(pi.client_secret.expect("Unwrapping client secret
-		// failed"));
-
-		Ok(Some(booking))
-	}
-
-	fn add_tickets_to_booking(
+	async fn add_tickets_to_booking(
 		context : &CustomContext,
 		booking_id : String,
 		users : Vec<BasicUser>,
 	) -> FieldResult<Booking> {
-		let booking = string_to_id(&booking_id)
-			.and_then(|booking_id| {
-				let bookings = context.bookings_handel();
-				Ok(DBHelper::get(&bookings, &booking_id))
-			})
+		let bid = string_to_id(&booking_id)
 			.or_else(|_| {
-				return Err(FieldError::new(
+				Err(FieldError::new(
 					"Booking does not exist",
 					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
-				));
-			})
-			.map(|b : Option<Booking>| b.expect("BOOKING"));
+				))
+			})?;
 
-		if booking.is_err() || users.len() == 0 {
-			return booking;
+		let booking = DBHelper::get(&context.bookings_handel(), &bid).await;
+
+		if booking.is_none() || users.is_empty() {
+			return Ok(booking.unwrap());
 		}
 
 		let users : Vec<Document> = users
 			.iter()
-			.map(|user| {
-				doc! {
-					"name" => &user.name,
-					"email"=> &user.email,
-					"mobile"=> &user.mobile,
-					"crew"=> &user.crew,
-				}
+			.map(|user| -> User {
+                user.clone().into()
 			})
+            .filter_map(|user| {
+                match bson::to_bson(&user).ok() {
+                    Some(bson::Bson::Document(doc)) => Some(doc),
+                    _ => None,
+                }
+            })
 			.collect();
 
-		let tickets_result = context
+		let tickets= context
 			.users_handel()
 			.insert_many(users, None)
-			.map(|users| users.inserted_ids.unwrap())
+            .await
+			.map(|users| users.inserted_ids)
 			.map(|ids| {
 				ids.iter()
 					.filter_map(|id| id.1.as_object_id().map(|a| a.to_owned()))
@@ -296,102 +149,131 @@ impl MutationRoot {
 			.map(|users| {
 				users
 					.iter()
-					.map(|user_id| {
-						doc! {
-							"booking_id" => string_to_id(&booking_id).unwrap().to_owned(),
-							"user_id" => user_id.to_owned(),
-						}
+                    .map(|user_id| -> Ticket {
+                        Ticket::new(&bid, user_id)
+                    })
+					.filter_map(|ticket| {
+                        match bson::to_bson(&ticket) {
+                            Ok(bson::Bson::Document(doc)) => Some(doc),
+                            _ => None,
+                        }
 					})
 					.collect::<Vec<Document>>()
-			})
-			.map(|tickets| context.tickets_handel().insert_many(tickets, None));
+			})?;
+
+            let tickets_result = context.tickets_handel().insert_many(tickets, None).await;
 
 		if tickets_result.is_ok() {
-			booking
+			Ok(booking.unwrap())
 		} else {
-			return Err(FieldError::new(
+			Err(
+                FieldError::new(
 				"Could not add Tickets to DB",
 				graphql_value!({"type":"DB_ERROR"}),
-			));
+			))
 		}
 	}
 
-	fn update_tickets(
+	async fn update_tickets(
 		context : &CustomContext,
 		tickets : Vec<TicketUpdate>,
 	) -> FieldResult<Vec<Ticket>> {
-		tickets
-			.iter()
-			.map(|ticket| {
-				let tdb = DBHelper::get(
+        let get_ticket = |id : ObjectId| async move {
+				DBHelper::get(
 					&context.tickets_handel(),
-					&string_to_id(&ticket.id).unwrap(),
-				);
-				(ticket, tdb)
-			})
-			.collect::<Vec<(&TicketUpdate, Option<Ticket>)>>()
-			.iter()
-			.filter_map(|(ticket, tdb)| Some((ticket, tdb.as_ref().map(|t| t.get_user_id_opt()))))
-			.collect::<Vec<(&&TicketUpdate, Option<Option<ObjectId>>)>>()
-			.iter()
-			.map(|(ticket, user_id)| (ticket, user_id.clone().flatten()))
-			.collect::<Vec<(&&&TicketUpdate, Option<ObjectId>)>>()
-			.iter()
-			.filter_map(|(ticket, user_id)| {
-				user_id.as_ref().map(|user_id| (ticket.to_owned(), user_id))
-			})
-			.collect::<Vec<(&&&TicketUpdate, &ObjectId)>>()
-			.iter()
+					&id,
+				).await
+        };
+
+        let futures: FuturesUnordered<_> = tickets.iter().map(|ticket| get_ticket(ticket.id.clone())).collect();
+
+		// let futures = tickets
+		// 	.iter()
+		// 	.map(|ticket| {
+        //         Box::pin(get_tickets(&ticket.id))
+		// 	})
+		// 	.collect::<Vec<Pin<Box<dyn Future<Output = Option<Ticket>>>>>>();
+        
+        let upadate_ticket = |user_id: Document, data: Document| async move {
+				let _ =context
+					.users_handel()
+					.update_one(user_id.to_owned(), data.to_owned(), None)
+                    .await;
+        };
+
+        let futures:FuturesUnordered<_> = futures
+            .collect::<Vec<Option<Ticket>>>()
+            .await
+            .iter()
+            .zip(tickets.iter())
+			.map(|(tdb, ticket): (&Option<Ticket>, &TicketUpdate)| -> (&TicketUpdate, Option<Option<ObjectId>>){
+                (ticket, tdb.as_ref().map(|t|
+                    t.get_user_id_opt())
+                )
+            })
+            .filter_map(|(ticket, user_id)| { user_id.flatten().map(|user_id| (ticket, user_id)) })
 			.map(|(ticket, user_id)| {
+                let user : User = ticket.user.clone().into();
+                let user = bson::to_bson(&user).unwrap();
+                let user = user.as_document().unwrap();
 				(
 					doc! {
-						"$set" => {
-							"name" => &ticket.user.name,
-							"mobile" => &ticket.user.mobile,
-							"email" => &ticket.user.email,
-							"crew" => &ticket.user.crew,
-						}
+						"$set" => user,
 					},
 					doc! {
-						"_id" => user_id.to_owned().to_owned()
+						"_id" => user_id
 					},
 				)
 			})
-			.collect::<Vec<(Document, Document)>>()
-			.iter()
 			.map(|(doc, user_id)| {
-				match context
-					.users_handel()
-					.update_one(user_id.to_owned(), doc.to_owned(), None)
-				{
-					Ok(_) => Some(()),
-					Err(_) => None,
-				}
-			})
-			.collect::<Vec<Option<()>>>();
+                upadate_ticket(user_id, doc)
+            })
+			.collect();
 
-		let tickets = tickets
-			.iter()
-			.filter_map(|ticket| string_to_id(&ticket.id).ok())
-			.collect::<Vec<ObjectId>>()
-			.iter()
-			.filter_map(|tid| DBHelper::get(&context.tickets_handel(), &tid))
-			.collect::<Vec<Ticket>>();
+        let _ = futures.collect::<Vec<()>>().await;
 
-		Ok(tickets)
+        let tickets: FuturesUnordered<_> = tickets.iter().map(|ticket| get_ticket(ticket.id.clone())).collect();
+
+        Ok(tickets.filter_map(|a| async move { a }).collect::<Vec<Ticket>>().await)
 	}
 
-	fn attachPaymentMethodToBooking(
+	async fn attachStripePaymentMethodToBooking(
 		context : &CustomContext,
 		booking_id : String,
 		payment_method_id : String,
-	) -> FieldResult<bool> {
-		dbg!(&booking_id);
-		let pmid = PaymentMethodId::from_str(&payment_method_id).unwrap();
+	) -> FieldResult<String> {
+		let mut booking : Booking =
+			match DBHelper::get(&context.bookings_handel(), &string_to_id(&booking_id)?).await {
+				Some(b) => b,
+				None => {
+					return Err(FieldError::new(
+						"Booking not found",
+						graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+					));
+				},
+			};
 
-		// let pm = PaymentMethod::retrieve(&context.stripe, &pmid, &[]);
-		// dbg!(pm);
+		let spi = match booking.stripe_payment_intent(context).await {
+			Some(spi) => spi,
+			None => booking
+				.create_stripe_payment_intent(context)
+				.await
+				.expect("PaymentIntent not created"),
+		};
 
-		Ok(true)
+		// dbg!(spi);
+
+		booking
+			.add_stripe_payment_method(&context, &payment_method_id)
+			.await?;
+
+		// dbg!(&spi);
+
+		spi.client_secret.ok_or_else(|| {
+			FieldError::new(
+				"Booking not found",
+				graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+			)
+		})
 	}
 }

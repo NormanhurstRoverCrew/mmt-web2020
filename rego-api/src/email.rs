@@ -81,11 +81,11 @@ impl<'a> MyEmail<'a> {
 		if let Some(user) = &self.user {
 			let verify_email_template = VerifyEmailTemplate {
 				name :              &user.name,
-				verification_link : &format!(
+				verification_link : &dbg!(format!(
 					"http://localhost:8080/confirm_email?uid={}&code={}",
 					&user.id.to_string(),
 					&user.get_code(),
-				),
+				)),
 			};
 			let email = EmailBuilder::new()
 				.from(format!(
@@ -94,7 +94,7 @@ impl<'a> MyEmail<'a> {
 				))
 				.to(user.email.to_owned())
 				.reply_to(std::env::var("EMAIL_RETURN").expect("EMAIL_RETURN"))
-				.subject("Hello, World!")
+				.subject("Verify your Email! Magical Mystery Tour 2020")
 				.html(verify_email_template.render().unwrap())
 				.build()
 				.unwrap();
