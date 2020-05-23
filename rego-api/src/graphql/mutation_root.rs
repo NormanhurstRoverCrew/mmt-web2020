@@ -1,15 +1,15 @@
-use futures::StreamExt;
-use futures::stream::FuturesUnordered;
 use crate::{
 	db::helpers as DBHelper,
 	email::MyEmail,
 	graphql::{context::CustomContext, util::string_to_id},
-	models::{BasicUser, Booking, Ticket, TicketUpdate, User},
+	models::{BasicUser, Booking, Ticket, TicketUpdate, Transaction, User},
 };
 use bson::{doc, oid::ObjectId, Document};
+use futures::{stream::FuturesUnordered, StreamExt};
 use juniper::{graphql_value, FieldError, FieldResult};
 use mongodb::results::InsertOneResult;
 use std::iter::Iterator;
+use stripe::{PaymentIntent, PaymentIntentUpdateParams};
 
 pub struct MutationRoot;
 #[juniper::graphql_object(
@@ -19,22 +19,19 @@ impl MutationRoot {
 	async fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
 		let users = context.users_handel();
 
-        let user : User = user.into();
+		let user : User = user.into();
 
-        let doc = bson::to_bson(&user)?;
+		let doc = bson::to_bson(&user)?;
 
-        let result = match doc {
-            bson::Bson::Document(document) =>  users.insert_one(
-		    	document,
-		    	None,
-		    ),
-            _ => {
+		let result = match doc {
+			bson::Bson::Document(document) => users.insert_one(document, None),
+			_ => {
 				return Err(juniper::FieldError::new(
 					"Failed to create bew User",
 					graphql_value!({"type": "DB_ERROR"}),
 				))
-            }
-        };
+			},
+		};
 
 		let user_id = match result.await {
 			Ok(InsertOneResult {
@@ -61,13 +58,16 @@ impl MutationRoot {
 		};
 
 		MyEmail::from_user(&user)
-			.verify_email().map(|_| Some(user))
-            .map_err(|_| juniper::FieldError::new(
-                    "Failed to send email",
-                    graphql_value!({
-                        "type": "EMAIL_FAIL"
-                    }),
-            ))
+			.verify_email()
+			.map(|_| Some(user))
+			.map_err(|_| {
+				juniper::FieldError::new(
+					"Failed to send email",
+					graphql_value!({
+						"type": "EMAIL_FAIL"
+					}),
+				)
+			})
 	}
 
 	async fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {
@@ -91,7 +91,7 @@ impl MutationRoot {
 
 		match user.is_code_valid(&code) {
 			Ok(()) => {
-                user.set_email_verified(&context, true).await;
+				user.set_email_verified(&context, true).await;
 			},
 			Err(e) => {
 				return Err(juniper::FieldError::new(
@@ -109,13 +109,12 @@ impl MutationRoot {
 		booking_id : String,
 		users : Vec<BasicUser>,
 	) -> FieldResult<Booking> {
-		let bid = string_to_id(&booking_id)
-			.or_else(|_| {
-				Err(FieldError::new(
-					"Booking does not exist",
-					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
-				))
-			})?;
+		let bid = string_to_id(&booking_id).or_else(|_| {
+			Err(FieldError::new(
+				"Booking does not exist",
+				graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+			))
+		})?;
 
 		let booking = DBHelper::get(&context.bookings_handel(), &bid).await;
 
@@ -125,21 +124,17 @@ impl MutationRoot {
 
 		let users : Vec<Document> = users
 			.iter()
-			.map(|user| -> User {
-                user.clone().into()
+			.map(|user| -> User { user.clone().into() })
+			.filter_map(|user| match bson::to_bson(&user).ok() {
+				Some(bson::Bson::Document(doc)) => Some(doc),
+				_ => None,
 			})
-            .filter_map(|user| {
-                match bson::to_bson(&user).ok() {
-                    Some(bson::Bson::Document(doc)) => Some(doc),
-                    _ => None,
-                }
-            })
 			.collect();
 
-		let tickets= context
+		let tickets = context
 			.users_handel()
 			.insert_many(users, None)
-            .await
+			.await
 			.map(|users| users.inserted_ids)
 			.map(|ids| {
 				ids.iter()
@@ -149,25 +144,20 @@ impl MutationRoot {
 			.map(|users| {
 				users
 					.iter()
-                    .map(|user_id| -> Ticket {
-                        Ticket::new(&bid, user_id)
-                    })
-					.filter_map(|ticket| {
-                        match bson::to_bson(&ticket) {
-                            Ok(bson::Bson::Document(doc)) => Some(doc),
-                            _ => None,
-                        }
+					.map(|user_id| -> Ticket { Ticket::new(&bid, user_id) })
+					.filter_map(|ticket| match bson::to_bson(&ticket) {
+						Ok(bson::Bson::Document(doc)) => Some(doc),
+						_ => None,
 					})
 					.collect::<Vec<Document>>()
 			})?;
 
-            let tickets_result = context.tickets_handel().insert_many(tickets, None).await;
+		let tickets_result = context.tickets_handel().insert_many(tickets, None).await;
 
 		if tickets_result.is_ok() {
 			Ok(booking.unwrap())
 		} else {
-			Err(
-                FieldError::new(
+			Err(FieldError::new(
 				"Could not add Tickets to DB",
 				graphql_value!({"type":"DB_ERROR"}),
 			))
@@ -178,30 +168,29 @@ impl MutationRoot {
 		context : &CustomContext,
 		tickets : Vec<TicketUpdate>,
 	) -> FieldResult<Vec<Ticket>> {
-        let get_ticket = |id : ObjectId| async move {
-				DBHelper::get(
-					&context.tickets_handel(),
-					&id,
-				).await
-        };
+		let get_ticket =
+			|id : ObjectId| async move { DBHelper::get(&context.tickets_handel(), &id).await };
 
-        let futures: FuturesUnordered<_> = tickets.iter().map(|ticket| get_ticket(ticket.id.clone())).collect();
+		let futures : FuturesUnordered<_> = tickets
+			.iter()
+			.map(|ticket| get_ticket(ticket.id.clone()))
+			.collect();
 
 		// let futures = tickets
 		// 	.iter()
 		// 	.map(|ticket| {
-        //         Box::pin(get_tickets(&ticket.id))
+		//         Box::pin(get_tickets(&ticket.id))
 		// 	})
 		// 	.collect::<Vec<Pin<Box<dyn Future<Output = Option<Ticket>>>>>>();
-        
-        let upadate_ticket = |user_id: Document, data: Document| async move {
-				let _ =context
-					.users_handel()
-					.update_one(user_id.to_owned(), data.to_owned(), None)
-                    .await;
-        };
 
-        let futures:FuturesUnordered<_> = futures
+		let upadate_ticket = |user_id : Document, data : Document| async move {
+			let _ = context
+				.users_handel()
+				.update_one(user_id.to_owned(), data.to_owned(), None)
+				.await;
+		};
+
+		let futures:FuturesUnordered<_> = futures
             .collect::<Vec<Option<Ticket>>>()
             .await
             .iter()
@@ -230,11 +219,17 @@ impl MutationRoot {
             })
 			.collect();
 
-        let _ = futures.collect::<Vec<()>>().await;
+		let _ = futures.collect::<Vec<()>>().await;
 
-        let tickets: FuturesUnordered<_> = tickets.iter().map(|ticket| get_ticket(ticket.id.clone())).collect();
+		let tickets : FuturesUnordered<_> = tickets
+			.iter()
+			.map(|ticket| get_ticket(ticket.id.clone()))
+			.collect();
 
-        Ok(tickets.filter_map(|a| async move { a }).collect::<Vec<Ticket>>().await)
+		Ok(tickets
+			.filter_map(|a| async move { a })
+			.collect::<Vec<Ticket>>()
+			.await)
 	}
 
 	async fn attachStripePaymentMethodToBooking(
@@ -253,7 +248,7 @@ impl MutationRoot {
 				},
 			};
 
-		let spi = match booking.stripe_payment_intent(context).await {
+		let spi = match booking.get_stripe_pi(context).await {
 			Some(spi) => spi,
 			None => booking
 				.create_stripe_payment_intent(context)
@@ -261,13 +256,10 @@ impl MutationRoot {
 				.expect("PaymentIntent not created"),
 		};
 
-		// dbg!(spi);
-
-		booking
-			.add_stripe_payment_method(&context, &payment_method_id)
-			.await?;
-
-		// dbg!(&spi);
+        PaymentIntent::update(&context.stripe, spi.id.as_str(), PaymentIntentUpdateParams {
+            payment_method: Some(&payment_method_id),
+            ..PaymentIntentUpdateParams::default()
+        }).await;
 
 		spi.client_secret.ok_or_else(|| {
 			FieldError::new(

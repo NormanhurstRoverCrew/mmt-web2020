@@ -1,7 +1,6 @@
 use crate::models::User;
 use askama::Template;
 use lettre::{
-	builder::EmailBuilder,
 	smtp::{
 		authentication::{Credentials, Mechanism},
 		error::{Error, SmtpResult},
@@ -9,8 +8,9 @@ use lettre::{
 		response::Response,
 		ConnectionReuseParameters,
 	},
-	Email, SmtpClient, SmtpTransport, Transport,
+	SendableEmail, SmtpClient, SmtpTransport, Transport,
 };
+use lettre_email::{Email, EmailBuilder};
 use std::{error, fmt};
 
 #[derive(Debug)]
@@ -75,7 +75,9 @@ impl<'a> MyEmail<'a> {
 			.transport()
 	}
 
-	fn send(&self, email : Email) -> SmtpResult { Self::transport().send(email) }
+	fn send<E : Into<SendableEmail>>(&self, email : E) -> SmtpResult {
+		Self::transport().send(email.into())
+	}
 
 	pub fn verify_email(&'a self) -> MyEmailResult<Response> {
 		if let Some(user) = &self.user {

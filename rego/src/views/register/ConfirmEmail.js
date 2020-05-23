@@ -38,7 +38,7 @@ const ConfirmEmail = ({ classes }) => {
 	const { search } = useLocation();
 	const [
 		verifyUser,
-		{ data: verifyUserData, loading: verifyUserLoading },
+		{ data: verifyUserData, loading: verifyUserLoading, error: verifyUserError },
 	] = useMutation(VERIFY_USER);
 	const { userId, updateUserId } = useContext(BookingContext);
 	const [name, setName] = useState("Loading");
@@ -58,6 +58,12 @@ const ConfirmEmail = ({ classes }) => {
 			history.push("/purchase");
 		}
 	}, [verifyUserData, verifyUserLoading]);
+
+	useEffect(() => {
+		if (verifyUserError) {
+			setErrors(verifyUserError.message);
+		}
+	}, [verifyUserError]);
 
 	const { error: getUserError, data: getUserData } = useQuery(GET_USER, {
 		variables: {
@@ -93,7 +99,15 @@ const ConfirmEmail = ({ classes }) => {
 					xs={12}
 				>
 					<Paper className={classNames(classes.fullHeight, classes.root)}>
+						<Typography
+							variant="h5"
+							className={classNames(
+								classes.text,
+								classes.red,
+							)}
+						>
 						{errors}
+						</Typography>
 						<Typography
 							variant="h5"
 							className={classNames(
@@ -146,6 +160,9 @@ const styles = (theme) => ({
 	},
 	bold: {
 		fontWeight: "bold",
+	},
+	red: {
+			color: "red",
 	},
 	paragraphGap: {
 		paddingBottom: "1.5em",

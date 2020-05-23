@@ -8,7 +8,7 @@ use stripe::Client;
 
 use libmmtapi::{
 	graphql::{context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot},
-	routes::{graphiql, graphql, Schema, stripe_hook},
+	routes::{graphiql, graphql, stripe_hook, Schema},
 };
 
 #[actix_rt::main]

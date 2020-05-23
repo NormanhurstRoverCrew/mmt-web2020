@@ -1,33 +1,44 @@
 use crate::{
-	db::{helpers as DBHelper, FromDoc},
-	graphql::{context::CustomContext, util::string_to_id},
-	models::{utils::*, Payment, Ticket, User, TICKET_PRICE},
+	db::helpers as DBHelper,
+	graphql::context::CustomContext,
+	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };
-use bson::{doc, oid::ObjectId, Document};
+use bson::{doc, oid::ObjectId};
 use juniper::{FieldError, FieldResult, ID};
-use std::str::FromStr;
+use mongodb::results::UpdateResult;
+use serde::{Deserialize, Serialize};
+use std::{error::Error, str::FromStr};
 use stripe::{
-	CreatePaymentIntent, Currency, PaymentIntent, PaymentIntentUpdateParams, PaymentMethod,
-	PaymentMethodId,
+	CreatePaymentIntent, Currency, PaymentIntent, PaymentIntentStatus, PaymentIntentUpdateParams,
+	PaymentMethod, PaymentMethodId,
 };
-use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Booking {
-    #[serde(rename = "_id")]
-	pub id :                ObjectId,
+	#[serde(rename = "_id")]
+	pub id :  ObjectId,
 	user_id : ObjectId,
-	pub no :                i32,
+	pub no :  i32,
 
-    #[serde(skip)]
-	pub tickets :           Vec<Ticket>,
+	#[serde(skip)]
+	pub tickets : Vec<Ticket>,
 
-	stripe_payment_intent : Option<String>,
-    pub payment: Option<Payment>,
+	pub payment : Payment,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct BookingUserOnly {
+struct BookingUserOnly {}
+
+impl Default for Booking {
+	fn default() -> Self {
+		Self {
+			id :      ObjectId::new().unwrap(),
+			user_id : ObjectId::new().unwrap(),
+			no :      999999,
+			tickets : vec![],
+			payment : Payment::default(),
+		}
+	}
 }
 
 impl Booking {
@@ -37,37 +48,36 @@ impl Booking {
 		let bookings = db.bookings_handel();
 		let seq = db.index("bookings");
 
-		let booking_id = bookings
-			.insert_one(
-				doc! {
-					"user_id" => &user.id,
-					"no" => seq.await,
-				},
-				None,
-			)
-            .await
-			.map(|b| b.inserted_id.as_object_id().unwrap().to_owned())
-			.ok();
+		let booking = Booking {
+			user_id : user.id.clone(),
+			no : seq.await,
+			..Self::default()
+		};
 
-		if let Some(b) = &booking_id {
-			let tickets = db.tickets_handel();
-			tickets
-				.insert_one(
-					doc! {
-						"booking_id" => b.to_owned(),
-						"user_id" => &user.id,
-					},
-					None,
-				)
-                .await
-				.ok();
+		match bson::to_bson(&booking) {
+			Ok(bson::Bson::Document(doc)) => {
+				let booking_id = bookings
+					.insert_one(doc, None)
+					.await
+					.map(|b| b.inserted_id.as_object_id().unwrap().to_owned())
+					.ok();
 
-			Payment::init(&db, &b).await;
-		}
+				if let Some(b) = &booking_id {
+					let ticket = Ticket::new(b, &user.id);
+					match bson::to_bson(&ticket) {
+						Ok(bson::Bson::Document(doc)) => {
+							db.tickets_handel().insert_one(doc, None).await.ok();
+						},
+						_ => {},
+					}
+				}
 
-		match booking_id {
-			Some(b) => Some(b),
-			None => None,
+				match booking_id {
+					Some(b) => Some(b),
+					None => None,
+				}
+			},
+			_ => None,
 		}
 	}
 
@@ -79,25 +89,16 @@ impl Booking {
 			doc! {
 				"booking_id" => &self.id,
 			},
-		).await;
+		)
+		.await;
 
 		tickets
 	}
 
 	pub async fn get_user(&self, db : &CustomContext) -> User {
-		DBHelper::get::<User>(
-			&db.users_handel(),
-			&self.user_id,
-		)
-            .await
-		.unwrap()
-	}
-
-	pub async fn stripe_payment_intent(&self, db : &CustomContext) -> Option<PaymentIntent> {
-		match &self.stripe_payment_intent {
-			Some(spi) => PaymentIntent::retrieve(&db.stripe, &spi).await.ok(),
-			None => None,
-		}
+		DBHelper::get::<User>(&db.users_handel(), &self.user_id)
+			.await
+			.unwrap()
 	}
 
 	async fn payment_description(&self, context : &CustomContext) -> String {
@@ -132,78 +133,107 @@ impl Booking {
 
 		let pi = PaymentIntent::create(&context.stripe, cpi).await.ok();
 
-		let id = pi.clone()
-			.map(|cpi| cpi.id.as_str().to_string())?;
-			self.update_stripe_payment_intent(&context, &id).await;
+		let id = pi.clone().map(|cpi| cpi.id.as_str().to_string())?;
+		// self.update_stripe_payment_intent(&context, &id).await;
+
+		self.add_transaction(&context, Transaction::stripe(id))
+			.await;
 
 		pi
-	}
-
-	async fn update_stripe_payment_intent(&mut self, context : &CustomContext, id : &str) -> Option<()> {
-		context
-			.bookings_handel()
-			.update_one(
-				doc! {
-					"_id" => &self.id,
-				},
-				doc! {
-					"$set" => {
-						"stripe_payment_intent" => id,
-					}
-				},
-				None,
-			)
-            .await
-			.ok()
-			.map(|_| {
-                self.stripe_payment_intent = Some(id.to_string());
-                ()
-            })
 	}
 
 	pub async fn add_stripe_payment_method(
 		&self,
 		context : &CustomContext,
 		pm_id : &str,
+		pi_id : &str,
 	) -> FieldResult<()> {
-		match &self.stripe_payment_intent {
-			Some(pi_id) => {
-				let pm_id = PaymentMethodId::from_str(pm_id).unwrap();
+		let pm_id = PaymentMethodId::from_str(pm_id).unwrap();
 
-				match PaymentMethod::retrieve(&context.stripe, &pm_id, &[]).await {
-					Ok(_pm) => {},
-					Err(_) => {
-						return Err(FieldError::new(
-							"Payment Method does not exist",
-							graphql_value!({"type":"STRIPE_ERROR"}),
-						));
-					},
-				};
-
-				let _ = PaymentIntent::update(
-					&context.stripe,
-					&pi_id,
-					PaymentIntentUpdateParams {
-						amount :                  Some(self.stripe_price(&context).await),
-						application_fee_amount :  None,
-						currency :                None,
-						customer :                None,
-						description :             Some(&self.payment_description(&context).await),
-						metadata :                None,
-						payment_method :          Some(&pm_id),
-						receipt_email :           None,
-						save_source_to_customer : None,
-						shipping :                None,
-						source :                  None,
-						transfer_group :          None,
-					},
-				)
-				.await;
-
-				Ok(())
+		match PaymentMethod::retrieve(&context.stripe, &pm_id, &[]).await {
+			Ok(_pm) => {},
+			Err(_) => {
+				return Err(FieldError::new(
+					"Payment Method does not exist",
+					graphql_value!({"type":"STRIPE_ERROR"}),
+				));
 			},
-			None => Ok(()), // Dont error. we will create the pi later
+		};
+
+		let _ = PaymentIntent::update(
+			&context.stripe,
+			&pi_id,
+			PaymentIntentUpdateParams {
+				amount :                  Some(self.stripe_price(&context).await),
+				application_fee_amount :  None,
+				currency :                None,
+				customer :                None,
+				description :             Some(&self.payment_description(&context).await),
+				metadata :                None,
+				payment_method :          Some(&pm_id),
+				receipt_email :           None,
+				save_source_to_customer : None,
+				shipping :                None,
+				source :                  None,
+				transfer_group :          None,
+			},
+		)
+		.await;
+
+		Ok(())
+	}
+
+	pub async fn add_transaction(&mut self, context : &CustomContext, t : Transaction) {
+		self.payment.transactions.push(t);
+		self.commit(context).await.expect("DB Error");
+	}
+
+	pub async fn get_stripe_pi(&self, context : &CustomContext) -> Option<PaymentIntent> {
+		let pis = self
+			.payment
+			.transactions
+			.iter()
+			.filter_map(|t| {
+				if let Transaction::Stripe {
+					pi_id, ..
+				} = t
+				{
+					Some(pi_id)
+				} else {
+					None
+				}
+			})
+			.collect::<Vec<&String>>();
+
+		for pi in pis {
+			let spi = PaymentIntent::retrieve(&context.stripe, &pi).await.ok()?;
+
+			match &spi.status {
+				PaymentIntentStatus::Succeeded | PaymentIntentStatus::Canceled => continue,
+				_ => return Some(spi),
+			};
 		}
+
+		None
+	}
+
+	pub async fn commit(&self, context : &CustomContext) -> Result<UpdateResult, Box<dyn Error>> {
+		let doc = bson::to_bson(&self)
+			.unwrap()
+			.as_document()
+			.unwrap()
+			.to_owned();
+		context
+			.bookings_handel()
+			.update_one(
+				doc! {
+					"_id" => &self.id,
+				},
+				doc,
+				None,
+			)
+			.await
+			.map_err(|e| e.into())
 	}
 }
 
@@ -219,5 +249,7 @@ impl Booking {
 	/// Contact details
 	async fn user(&self, context : &CustomContext) -> User { self.get_user(context).await }
 
-	async fn tickets(&self, context : &CustomContext) -> Vec<Ticket> { self.get_tickets(context).await }
+	async fn tickets(&self, context : &CustomContext) -> Vec<Ticket> {
+		self.get_tickets(context).await
+	}
 }

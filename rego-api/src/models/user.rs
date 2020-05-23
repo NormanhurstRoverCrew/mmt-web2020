@@ -1,13 +1,12 @@
-use bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
-use rand::{distributions::Alphanumeric, Rng};
 use crate::{
 	db::{helpers as DBHelper, FromDoc},
 	graphql::{context::CustomContext, util::string_to_id},
 	models::{utils::*, Booking, Ticket},
 };
-use bson::{doc, Document};
+use bson::{doc, oid::ObjectId, Document};
 use juniper::{GraphQLInputObject, ID};
+use rand::{distributions::Alphanumeric, Rng};
+use serde::{Deserialize, Serialize};
 
 #[derive(GraphQLInputObject, Clone, Debug)]
 pub struct BasicUser {
@@ -18,20 +17,20 @@ pub struct BasicUser {
 }
 
 impl From<BasicUser> for User {
-    fn from(bu: BasicUser) -> Self {
-        Self {
-            name: bu.name,
-            email: bu.email,
-            mobile: bu.mobile,
-            crew: bu.crew,
-            ..Self::default()
-        }
-    }
+	fn from(bu : BasicUser) -> Self {
+		Self {
+			name : bu.name,
+			email : bu.email,
+			mobile : bu.mobile,
+			crew : bu.crew,
+			..Self::default()
+		}
+	}
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
-    #[serde(rename = "_id")]
+	#[serde(rename = "_id")]
 	pub id :             ObjectId,
 	pub name :           String,
 	pub email :          String,
@@ -53,9 +52,9 @@ impl User {
 			crew :           "".to_string(),
 			email_verified : false,
 			code :           rand::thread_rng()
-			.sample_iter(&Alphanumeric)
-			.take(16)
-			.collect::<String>(),
+				.sample_iter(&Alphanumeric)
+				.take(16)
+				.collect::<String>(),
 		}
 	}
 
@@ -69,11 +68,13 @@ impl User {
 
 	pub fn get_code(&self) -> &str { &self.code }
 
-    pub async fn set_email_verified(&mut self, context:&CustomContext, verified: bool) {
-        self.email_verified = verified;
+	pub async fn set_email_verified(&mut self, context : &CustomContext, verified : bool) {
+		self.email_verified = verified;
 
-        if let Ok(bson::Bson::Document(doc)) = bson::to_bson(&self) {
-				let _ = context.users_handel().update_one(
+		if let Ok(bson::Bson::Document(doc)) = bson::to_bson(&self) {
+			let _ = context
+				.users_handel()
+				.update_one(
 					doc! {
 						"_id" => &self.id,
 					},
@@ -81,10 +82,10 @@ impl User {
 						"$set" => doc,
 					},
 					None,
-				).await;
-            };
-
-    }
+				)
+				.await;
+		};
+	}
 
 	pub async fn get_booking(&self, db : &CustomContext) -> Option<Booking> {
 		let bookings = db.bookings_handel();
@@ -95,14 +96,14 @@ impl User {
 			},
 		);
 
-        match booking.await {
-            Some(b) => Some(b),
-            None => {
-			let booking_id = Booking::create(&db, self).await.expect("New Booking");
+		match booking.await {
+			Some(b) => Some(b),
+			None => {
+				let booking_id = Booking::create(&db, self).await.expect("New Booking");
 
-			 DBHelper::get::<Booking>(&bookings, &booking_id).await
-            }
-        }
+				DBHelper::get::<Booking>(&bookings, &booking_id).await
+			},
+		}
 	}
 
 	pub fn get_ticket(&self, _db : &CustomContext) -> Option<Ticket> {
@@ -133,7 +134,9 @@ impl User {
 	/// Has this users email been verified?
 	fn email_verified(&self) -> bool { self.email_verified }
 
-	async fn booking(&self, context : &CustomContext) -> Option<Booking> { self.get_booking(context).await }
+	async fn booking(&self, context : &CustomContext) -> Option<Booking> {
+		self.get_booking(context).await
+	}
 
-	fn ticket(&self, context : &CustomContext) -> Option<Ticket> { self.get_ticket(context)}
+	fn ticket(&self, context : &CustomContext) -> Option<Ticket> { self.get_ticket(context) }
 }

@@ -5,7 +5,7 @@ use crate::{
 };
 use bson::{doc, oid::ObjectId, Document};
 use juniper::ID;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 pub const TICKET_PRICE : f64 = 30.0;
 
@@ -17,28 +17,28 @@ pub struct TicketUpdate {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Ticket {
-    #[serde(rename = "_id")]
-	pub id :  ObjectId,
-	user_id : ObjectId,
+	#[serde(rename = "_id")]
+	pub id :     ObjectId,
+	user_id :    ObjectId,
 	booking_id : ObjectId,
 }
 
 impl Ticket {
 	pub fn default() -> Self {
 		Self {
-			id :      ObjectId::new().unwrap(),
-			user_id : ObjectId::new().unwrap(),
+			id :         ObjectId::new().unwrap(),
+			user_id :    ObjectId::new().unwrap(),
 			booking_id : ObjectId::new().unwrap(),
 		}
 	}
-    
-    pub fn new(booking_id: &ObjectId, user_id: &ObjectId) -> Self {
-        Self {
-            booking_id: booking_id.clone(),
-            user_id: user_id.clone(),
-            ..Self::default()
-        }
-    }
+
+	pub fn new(booking_id : &ObjectId, user_id : &ObjectId) -> Self {
+		Self {
+			booking_id : booking_id.clone(),
+			user_id : user_id.clone(),
+			..Self::default()
+		}
+	}
 
 	pub fn get_booking(&self) -> Option<Booking> {
 		let _id = dbg!(&self.id);
@@ -46,9 +46,7 @@ impl Ticket {
 		None
 	}
 
-	pub fn get_user_id(&self) -> &ObjectId {
-		&self.user_id
-	}
+	pub fn get_user_id(&self) -> &ObjectId { &self.user_id }
 
 	pub fn get_user_id_opt(&self) -> Option<ObjectId> { Some(self.user_id.to_owned()) }
 
@@ -58,7 +56,8 @@ impl Ticket {
 			doc! {
 				"_id" => &self.user_id
 			},
-		).await
+		)
+		.await
 	}
 }
 
