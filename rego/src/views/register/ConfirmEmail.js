@@ -12,6 +12,7 @@ import { useQuery } from "@apollo/react-hooks";
 import { gql } from "apollo-boost";
 import { useLocation, useHistory } from "react-router-dom";
 
+import RawConfirmEmail from "views/raw/ConfirmEmail";
 import { BookingContext } from "context/BookingContext";
 
 const GET_USER = gql`
@@ -34,60 +35,6 @@ const VERIFY_USER = gql`
 `;
 
 const ConfirmEmail = ({ classes }) => {
-	const history = useHistory();
-	const { search } = useLocation();
-	const [
-		verifyUser,
-		{ data: verifyUserData, loading: verifyUserLoading, error: verifyUserError },
-	] = useMutation(VERIFY_USER);
-	const { userId, updateUserId } = useContext(BookingContext);
-	const [name, setName] = useState("Loading");
-	const [email, setEmail] = useState("Loading");
-	const [errors, setErrors] = useState();
-
-	useEffect(() => {
-		const { uid, code } = queryString.parse(search);
-		updateUserId(uid);
-		if (uid && code) {
-			verifyUser({ variables: { uid, code } });
-		}
-	}, [search]);
-
-	useEffect(() => {
-		if (verifyUserData && verifyUserData.verifyUser.emailVerified) {
-			history.push("/purchase");
-		}
-	}, [verifyUserData, verifyUserLoading]);
-
-	useEffect(() => {
-		if (verifyUserError) {
-			setErrors(verifyUserError.message);
-		}
-	}, [verifyUserError]);
-
-	const { error: getUserError, data: getUserData } = useQuery(GET_USER, {
-		variables: {
-			id: userId,
-		},
-	});
-
-	useEffect(() => {
-		if (
-			getUserData &&
-			getUserData.bookingFromUser &&
-			getUserData.bookingFromUser.user
-		) {
-			setName(getUserData.bookingFromUser.user.name.split(" ")[0]);
-			setEmail(getUserData.bookingFromUser.user.email);
-		}
-	}, [getUserData]);
-
-	useEffect(() => {
-		if (getUserError) {
-			setErrors(JSON.stringify(getUserError));
-		}
-	}, [getUserError]);
-
 	return (
 		<Theme shiftLeft>
 			<Grid container direction="row-reverse">
@@ -98,44 +45,7 @@ const ConfirmEmail = ({ classes }) => {
 					sm={10}
 					xs={12}
 				>
-					<Paper className={classNames(classes.fullHeight, classes.root)}>
-						<Typography
-							variant="h5"
-							className={classNames(
-								classes.text,
-								classes.red,
-							)}
-						>
-						{errors}
-						</Typography>
-						<Typography
-							variant="h5"
-							className={classNames(
-								classes.text,
-								classes.bold,
-								classes.paragraphGap
-							)}
-						>
-							Hello {name}, Please confirm your email
-						</Typography>
-						<Typography className={classNames(classes.paragraphGap)}>
-							Thanks for registering. We’ve sent you an email from{" "}
-							<b>bookings@normorovers.com</b> to <b>{email}</b>. Please click on
-							the link in your email to finalise your tickets.
-						</Typography>
-						<Typography
-							className={classNames(classes.bold, classes.paragraphGap)}
-						>
-							Haven’t received an email?
-						</Typography>
-						<Typography className={classNames(classes.paragraphGap)}>
-							Please check your Junk/Spam folder. If the email does not appear
-							in your inbox within the next 5 min, please contact Grant Perry.
-						</Typography>
-						<Typography>
-							You may close this window if you have received your email.
-						</Typography>
-					</Paper>
+					<RawConfirmEmail/>
 				</Grid>
 			</Grid>
 		</Theme>

@@ -11,6 +11,7 @@ import { useMutation } from "@apollo/react-hooks";
 import gql from "graphql-tag";
 import { useHistory } from "react-router-dom";
 
+import RawRegister from "views/raw/Register.js";
 import { BookingContext } from "context/BookingContext";
 
 const NEW_USER = gql`
@@ -26,31 +27,6 @@ const NEW_USER = gql`
 `;
 
 const Register = ({ classes }) => {
-	const history = useHistory();
-	const [addUser, { data, loading, error }] = useMutation(NEW_USER);
-	const [errors, setErrors] = useState({});
-	const [user, setUser] = useState({
-		name: "Grant Perry",
-		email: "grant42perry@gmail.com",
-		mobile: "0439675452",
-		crew: "Normanhurst Rovers",
-	});
-	const updateUser = (u) => setUser(_.extend({}, user, u));
-
-	const { updateUserId } = useContext(BookingContext);
-
-	useEffect(() => {
-		console.log(loading, error, data);
-		if (!loading && !error && data) {
-			console.log(data.newUser);
-			const { id } = data.newUser;
-			updateUserId(id);
-			history.push("/confirm_email");
-		}
-	}, [data]);
-
-	if (error) return <>{error}</>;
-
 	return (
 		<Theme shiftLeft>
 			<Grid container direction="row-reverse">
@@ -62,29 +38,7 @@ const Register = ({ classes }) => {
 						>
 							Register Now
 						</Norse>
-						<Typography
-							variant="h5"
-							className={classNames(classes.text, classes.bold)}
-						>
-							Your details
-						</Typography>
-						<User user={user} updateUser={updateUser} errors={errors} />
-						<div className={classes.actionsContainer}>
-							<Button
-								onClick={(e) => {
-									addUser({ variables: { user } });
-								}}
-								color="primary"
-								variant="contained"
-								size="large"
-								classes={{
-									root: classes.buttonRoot,
-									textPrimary: classes.buttonTextPrimary,
-								}}
-							>
-								{!loading ? "Register" : "Loading"}
-							</Button>
-						</div>
+						<RawRegister/>
 					</Paper>
 				</Grid>
 			</Grid>

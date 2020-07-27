@@ -20,6 +20,7 @@ import Eft from "components/payment/Eft";
 import Cash from "components/payment/Cash";
 import CheckoutSummary from "components/booking/CheckoutSummary";
 
+import CheckoutSelect from "views/raw/CheckoutSelect";
 import { BookingContext } from "context/BookingContext";
 
 import { Elements } from "@stripe/react-stripe-js";
@@ -30,119 +31,27 @@ import Stripe from "components/payment/Stripe";
 // recreating the `Stripe` object on every render.
 const stripePromise = loadStripe("pk_test_3jpeKc8apKbPVGnnNoyY51GK00N6X69Wap");
 
-const Checkout = ({ classes }) => {
-	const { checkoutMethod, updateCheckoutMethod, tickets, bookingId } = useContext(
-		BookingContext
-	);
-
-	const [billing_details, updateBD] = useState();
-
-	useEffect(() => {
-		if (tickets && tickets.length > 0) {
-			console.log(tickets);
-			const { name, email, mobile: phone } = tickets[0].user;
-			updateBD({
-				name,
-				email,
-				phone,
-			});
-		}
-	}, [tickets]);
-
-	const history = useHistory();
-
-	const gotoHome = (e) => {
-		history.push("/");
-	};
-
-	const handlePaymentOptionChange = (e) => {
-		updateCheckoutMethod(e.target.value);
-	};
-
-	return (
-		<Theme noBG>
-			<Grid container direction="row">
-				<Grid item sm={7} xs={12}>
-					<div className={classNames(classes.root)}>
-						<Norse
-							variant="h4"
-							className={classNames(classes.text, classes.bold, classes.title)}
-						>
-							Checkout
-						</Norse>
-						<Typography className={classNames(classes.padBottom)}>
-							Checkout with your ticket or add more tickets to your
-							registration.
-						</Typography>
-						<Typography
-							variant="h5"
-							className={classNames(classes.bold, classes.padBottom)}
-						>
-							Select an option
-						</Typography>
-						<RadioGroup
-							aria-label="Payment method"
-							name="payment_method"
-							className={classNames(classes.group)}
-							value={checkoutMethod}
-							onChange={handlePaymentOptionChange}
-						>
-							<FormControlLabel
-								value="stripe"
-								control={<Radio />}
-								label="Card payment via Stripe"
-							/>
-							<FormControlLabel
-								value="eft"
-								control={<Radio />}
-								label="Electronic Funds Transfer (EFT)"
-								/* disabled */
-							/>
-							<FormControlLabel
-								value="cash"
-								control={<Radio />}
-								label={"Cash on the day"}
-							/>
-						</RadioGroup>
-						<hr className={classNames(classes.hr)} />
-						{checkoutMethod == "eft" && (
-							<Grid item>
-								<Eft tickets={tickets && tickets.length} />
-								<Thankyou classes={classes} gotoHome={gotoHome} />
-							</Grid>
-						)}
-						{checkoutMethod == "stripe" && (
-							<Grid item>
-								<Elements stripe={stripePromise}>
-									<Stripe billing_details={billing_details} bookingId={bookingId} />
-								</Elements>
-								<Thankyou classes={classes} gotoHome={gotoHome} />
-							</Grid>
-						)}
-						{checkoutMethod == "cash" && (
-							<Grid item>
-								<Cash tickets={tickets && tickets.length} />
-								<Thankyou classes={classes} gotoHome={gotoHome} />
-							</Grid>
-						)}
-					</div>
-				</Grid>
-				<Grid
-					item
-					sm={5}
-					xs={12}
-					className={classNames(classes.checkoutSummaryArea)}
-					container
-					justify="flex-start"
-				>
-					<CheckoutSummary />
-				</Grid>
+const Checkout = ({ classes }) => (
+	<Theme noBG>
+		<Grid container direction="row">
+			<Grid item sm={7} xs={12}>
+				<CheckoutSelect/>
 			</Grid>
-		</Theme>
-	);
-};
+			<Grid
+				item
+				sm={5}
+				xs={12}
+				className={classNames(classes.checkoutSummaryArea)}
+				container
+				justify="flex-start"
+			>
+				<CheckoutSummary />
+			</Grid>
+		</Grid>
+	</Theme>
+);
 
-const Thankyou = (props) => (
+export const Thankyou = (props) => (
 	<>
 		<Typography variant="h5" className={classNames(props.classes.thankyouText)}>
 			Thank you for registering for MMT 2019.
@@ -160,69 +69,10 @@ const Thankyou = (props) => (
 );
 
 const styles = (theme) => ({
-	root: {
-		padding: "6em 4em",
-		backgroundColor: "white",
-		[theme.breakpoints.down("xs")]: {
-			padding: "3em 2em",
-		},
-	},
-	red: {
-		color: "red",
-	},
-	heading: {
-		textAlign: "center",
-	},
-	fullHeight: {
-		height: "fit-content",
-		minHeight: "100vh",
-		borderRadius: "0",
-		bottom: 0,
-		top: 0,
-		overflow: "auto",
-	},
-	text: {
-		color: theme.palette.text.primary,
-	},
-	bold: {
-		fontWeight: "bold",
-	},
-	padTop: {
-		paddingTop: "1em",
-	},
-	padBottom: {
-		paddingBottom: "1em",
-	},
-	title: {
-		paddingBottom: "0.8em",
-	},
-	paragraphGap: {
-		paddingBottom: "1.5em",
-	},
-	buttonTextPrimary: {
-		color: "white",
-	},
-	group: {
-		paddingBottom: "2em",
-	},
 	buttonRoot: {
 		backgroundColor: theme.palette.primary.main,
 		borderRadius: "0",
 		padding: theme.spacing(1.75) + "px " + theme.spacing(3.5) + "px",
-	},
-	addTicketButton: {
-		color: theme.palette.primary.main,
-	},
-	backButton: {
-		color: "white",
-	},
-	label: {
-		fontSize: "0.7em",
-		marginBottom: "-0.6em",
-		color: theme.palette.text.secondary,
-	},
-	data: {
-		fontSize: "1.0em",
 	},
 	checkoutSummaryArea: {
 		backgroundColor: "#f4f5f7",
