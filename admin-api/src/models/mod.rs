@@ -4,6 +4,8 @@ mod ticket;
 mod user;
 pub mod utils;
 pub use booking::Booking;
-pub use payment::{Payment, Transaction, TransactionInput};
+pub use payment::{Payment, Transaction};
 pub use ticket::{Ticket, TicketUpdate};
 pub use user::{BasicUser, User, UserUpdate};
+
+pub const TICKET_PRICE : f64 = 30.0;

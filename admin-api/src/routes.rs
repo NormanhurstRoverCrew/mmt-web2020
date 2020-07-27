@@ -1,57 +1,40 @@
-use rocket::{get, post, response::content, State};
-
-use juniper::{EmptySubscription, RootNode};
-
 use crate::{
-	auth::AdminUser,
-	db::PrimaryDb,
-	graphql::{context::SharedContext, mutation_root::MutationRoot, query_root::QueryRoot},
+        graphql::{
+                context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot,
+        },
 };
+use actix_web::{web, Error, HttpResponse};
+use juniper::{
+        http::{graphiql::graphiql_source, GraphQLRequest},
+        EmptySubscription, RootNode,
+};
+use mongodb::Database;
+use std::sync::Arc;
+use stripe::{Client};
 
-pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<SharedContext>>;
+pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<CustomContext>>;
 
-pub fn schema() -> Schema {
-	Schema::new(
-		QueryRoot,
-		MutationRoot,
-		EmptySubscription::<SharedContext>::new(),
-	)
+pub async fn graphiql() -> HttpResponse {
+        let html = graphiql_source("http://localhost:8083/graphql", None);
+        HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(html)
 }
 
-#[get("/")]
-pub fn index() -> &'static str { "Hello, world!" }
+pub async fn graphql(
+        schema : web::Data<Arc<Schema>>,
+        stripe : web::Data<Client>,
+        db : web::Data<Database>,
+        data : web::Json<GraphQLRequest>,
+) -> Result<HttpResponse, Error> {
+        let context = CustomContext {
+                db :     db.into_inner(),
+                stripe : stripe.into_inner(),
+        };
 
-#[get("/")]
-pub fn graphiql() -> content::Html<String> { juniper_rocket::graphiql_source("/graphql", None) }
-
-#[get("/graphql?<request>")]
-pub fn get_graphql_handler(
-	context : PrimaryDb,
-	request : juniper_rocket::GraphQLRequest,
-	schema : State<Schema>,
-	admin : AdminUser,
-) -> juniper_rocket::GraphQLResponse {
-	request.execute_sync(
-		schema.inner(),
-		&SharedContext {
-			connection : context,
-			auth :       admin,
-		},
-	)
-}
-
-#[post("/graphql", data = "<request>")]
-pub fn post_graphql_handler(
-	context : PrimaryDb,
-	request : juniper_rocket::GraphQLRequest,
-	schema : State<Schema>,
-	admin : AdminUser,
-) -> juniper_rocket::GraphQLResponse {
-	request.execute_sync(
-		schema.inner(),
-		&SharedContext {
-			connection : context,
-			auth :       admin,
-		},
-	)
+        let res = data.execute(&schema, &context).await;
+        let res = serde_json::to_string(&res)?;
+        Ok(HttpResponse::Ok()
+                .content_type("application/json")
+                .body(res))
 }

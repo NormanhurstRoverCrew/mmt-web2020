@@ -1,10 +1,11 @@
 use crate::{
-	db::{helpers as DBHelper, FromDoc},
-	graphql::{context::SharedContext, util::string_to_id},
-	models::{utils::*, Booking, Ticket},
+	db::helpers as DBHelper,
+	graphql::context::CustomContext,
+	models::{Booking, Ticket},
 };
+use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
-use mongodb::Document;
+use serde::{Serialize, Deserialize};
 
 #[derive(GraphQLInputObject, Clone, Debug)]
 pub struct BasicUser {
@@ -14,7 +15,7 @@ pub struct BasicUser {
 	pub crew :   String,
 }
 
-#[derive(GraphQLInputObject, Clone, Debug)]
+#[derive(GraphQLInputObject, Clone, Debug, Deserialize, Serialize)]
 pub struct UserUpdate {
 	pub name :           String,
 	pub email :          String,
@@ -24,9 +25,10 @@ pub struct UserUpdate {
 	pub email_verified : bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
-	pub id :             String,
+	#[serde(rename = "_id")]
+	pub id :             ObjectId,
 	pub name :           String,
 	pub email :          String,
 	pub mobile :         String,
@@ -35,41 +37,42 @@ pub struct User {
 	pub email_verified : bool,
 
 	// Used to verify if the supplied email is valid
-	code : String,
+	code : Option<String>,
 }
 
 impl User {
 	pub fn default() -> Self {
 		Self {
-			id :             "".to_string(),
+			id :             ObjectId::new().unwrap(),
 			name :           "".to_string(),
 			email :          "".to_string(),
 			mobile :         "".to_string(),
 			crew :           "".to_string(),
 			diet :           "".to_string(),
 			email_verified : false,
-			code :           "".to_string(),
+			code :           None,
 		}
 	}
 
 	pub fn is_code_valid(&self, code : &str) -> Result<(), String> {
-		match code {
-			"" => Err(String::from("Code is an empty string")),
-			c if c == self.code => Ok(()),
-			_ => Err(String::from("Supplied code is incorrect")),
-		}
+        match &self.code {
+            Some(real) => match code {
+		    	"" => Err(String::from("Code is an empty string")),
+		    	c if c == real => Ok(()),
+		    	_ => Err(String::from("Supplied code is incorrect")),
+		    }
+		    	_ => Err(String::from("Code was never generated...")),
+        }
 	}
 
-	pub fn get_code(&self) -> &str { &self.code }
+	pub fn get_code(&self) -> Option<&str> { self.code.as_ref().map(|c| c.as_str()) }
 
-	pub fn get_booking(&self, db : &SharedContext) -> Option<Booking> {
-		let user_id = &self.id;
-
+	pub async fn get_booking(&self, db : &CustomContext) -> Option<Booking> {
 		let bookings = db.bookings_handel();
 		let booking = DBHelper::find::<Booking>(
 			&bookings,
 			doc! {
-				"user_id" => string_to_id(user_id).expect("UID"),
+				"user_id" => &self.id,
 			},
 		);
 
@@ -85,34 +88,19 @@ impl User {
 		// 	},
 		// };
 
-		booking
+		booking.await
 	}
 
-	pub fn get_ticket(&self, _db : &SharedContext) -> Option<Ticket> {
+	pub async fn get_ticket(&self, _db : &CustomContext) -> Option<Ticket> {
 		let _user_id = dbg!(&self.id);
 
 		None
 	}
 }
 
-impl FromDoc for User {
-	fn from_doc(item : &Document) -> Self {
-		Self {
-			id :             doc_get_id(&item),
-			name :           doc_get_string(&item, "name", ""),
-			email :          doc_get_string(&item, "email", ""),
-			mobile :         doc_get_string(&item, "mobile", ""),
-			crew :           doc_get_string(&item, "crew", ""),
-			diet :           doc_get_string(&item, "diet", ""),
-			email_verified : doc_get_bool(&item, "email_verified", false),
-			code :           doc_get_string(&item, "code", ""), //TODO This might be a loophole???
-		}
-	}
-}
-
-#[juniper::graphql_object(Context = SharedContext)]
+#[juniper::graphql_object(Context = CustomContext)]
 impl User {
-	fn id(&self) -> ID { ID::from(self.id.to_owned()) }
+	fn id(&self) -> ID { ID::from(self.id.to_hex()) }
 
 	/// Contact name
 	fn name(&self) -> &str { &self.name }
@@ -132,7 +120,7 @@ impl User {
 	/// Has this users email been verified?
 	fn email_verified(&self) -> bool { self.email_verified }
 
-	fn booking(&self, context : &SharedContext) -> Option<Booking> { self.get_booking(context) }
+	async fn booking(&self, context : &CustomContext) -> Option<Booking> { self.get_booking(context).await }
 
-	fn ticket(&self, context : &SharedContext) -> Option<Ticket> { self.get_ticket(context) }
+	async fn ticket(&self, context : &CustomContext) -> Option<Ticket> { self.get_ticket(context).await }
 }

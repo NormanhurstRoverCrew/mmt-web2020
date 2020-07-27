@@ -10,9 +10,6 @@
 //! routable method, rocket will not route the request to it unless it can
 //! resolve the role in the JWT in the request header.
 
-extern crate rocket;
-extern crate rocket_contrib;
-
 extern crate chrono;
 extern crate rand;
 

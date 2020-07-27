@@ -1,49 +1,51 @@
-#![feature(decl_macro, proc_macro_hygiene)]
-
-use rocket::routes;
+use actix_cors::Cors;
+use actix_web::{http::header, middleware, web, App, HttpServer};
+use juniper::EmptySubscription;
+use mongodb::Client as Mongo;
+use stripe::Client;
 
 use libmmtapi::{
-	db::PrimaryDb,
-	routes::{self, schema},
+        graphql::{context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot},
+        routes::{graphiql, graphql, Schema},
 };
 
-use libmmtapi::auth::Jwks;
+#[actix_rt::main]
+async fn main() -> Result<(), std::io::Error> {
+        std::env::set_var("RUST_LOG", "actix_web=info");
+        env_logger::init();
 
-fn main() {
-	let _guard = sentry::init(std::env::var("SENTRY_ADDRESS").unwrap());
-	sentry::integrations::panic::register_panic_handler();
-	// let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:8080"]);
+        let client = Mongo::with_uri_str("mongodb://db:27017/").await.unwrap();
+        let db = client.database("mmt_development");
 
-	// You can also deserialize this
-	let cors = match (rocket_cors::CorsOptions {
-		// allowed_origins,
-		// allowed_methods: vec![Method::Post].into_iter().map(From::from).collect(),
-		// allowed_headers: AllowedHeaders::some(&["Authorization", "Accept"]),
-		// allow_credentials: true,
-		send_wildcard : true,
-		..Default::default()
-	}
-	.to_cors())
-	{
-		Ok(c) => c,
-		_ => panic!("Cors header not set up"),
-	};
+        let stripe = std::env::var("STRIPE_API_KEY").expect("Stripe Api Key");
+        let stripe = Client::new(stripe);
 
-	let jwks = Jwks::get().expect("Could not get JWKS");
+        // Create Juniper schema
+        let schema = std::sync::Arc::new(Schema::new(
+                QueryRoot,
+                MutationRoot,
+                EmptySubscription::<CustomContext>::new(),
+        ));
 
-	rocket::ignite()
-		.attach(cors)
-		.attach(PrimaryDb::fairing())
-		.manage(schema())
-		.manage(jwks)
-		.mount(
-			"/",
-			routes![
-				routes::index,
-				routes::get_graphql_handler,
-				routes::post_graphql_handler
-			],
-		)
-		.mount("/graphiql", routes![routes::graphiql])
-		.launch();
+        // Start http server
+        HttpServer::new(move || {
+                let cors = Cors::new()
+                        .allowed_origin("http://localhost:8081")
+                        .allowed_origin("http://localhost:8083")
+                        .allowed_methods(vec!["GET", "POST", "OPTIONS"])
+                        .allowed_headers(vec![header::CONTENT_TYPE, header::AUTHORIZATION])
+                        .finish();
+
+                App::new()
+                        .data(schema.clone())
+                        .data(stripe.clone())
+                        .data(db.clone())
+                        .wrap(middleware::Logger::default())
+                        .wrap(cors)
+                        .service(web::resource("/graphql").route(web::post().to(graphql)))
+                        .service(web::resource("/graphiql").route(web::get().to(graphiql)))
+        })
+        .bind("0.0.0.0:8000")?
+        .run()
+        .await
 }

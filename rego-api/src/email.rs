@@ -79,6 +79,19 @@ impl<'a> MyEmail<'a> {
 		Self::transport().send(email.into())
 	}
 
+	fn build(email : &str) -> EmailBuilder {
+		EmailBuilder::new()
+			.from((
+				format!(
+					"bookings@{}",
+					std::env::var("MAILGUN_HELLO").expect("MAILGUN_HELLO")
+				),
+				"MMT Admin",
+			))
+			.to(email.to_owned())
+			.reply_to(std::env::var("EMAIL_RETURN").expect("EMAIL_RETURN"))
+	}
+
 	pub fn verify_email(&'a self) -> MyEmailResult<Response> {
 		if let Some(user) = &self.user {
 			let verify_email_template = VerifyEmailTemplate {
@@ -89,13 +102,8 @@ impl<'a> MyEmail<'a> {
 					&user.get_code(),
 				)),
 			};
-			let email = EmailBuilder::new()
-				.from(format!(
-					"bookings@{}",
-					std::env::var("MAILGUN_HELLO").expect("MAILGUN_HELLO")
-				))
-				.to(user.email.to_owned())
-				.reply_to(std::env::var("EMAIL_RETURN").expect("EMAIL_RETURN"))
+
+			let email = Self::build(&user.email)
 				.subject("Verify your Email! Magical Mystery Tour 2020")
 				.html(verify_email_template.render().unwrap())
 				.build()

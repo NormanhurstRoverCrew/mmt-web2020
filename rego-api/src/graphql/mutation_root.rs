@@ -190,7 +190,7 @@ impl MutationRoot {
 				.await;
 		};
 
-		let futures:FuturesUnordered<_> = futures
+		let futures : FuturesUnordered<_> = futures
             .collect::<Vec<Option<Ticket>>>()
             .await
             .iter()

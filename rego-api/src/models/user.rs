@@ -36,6 +36,7 @@ pub struct User {
 	pub email :          String,
 	pub mobile :         String,
 	pub crew :           String,
+	pub diet :           String,
 	pub email_verified : bool,
 
 	// Used to verify if the supplied email is valid
@@ -50,6 +51,7 @@ impl User {
 			email :          "".to_string(),
 			mobile :         "".to_string(),
 			crew :           "".to_string(),
+			diet :           "".to_string(),
 			email_verified : false,
 			code :           rand::thread_rng()
 				.sample_iter(&Alphanumeric)

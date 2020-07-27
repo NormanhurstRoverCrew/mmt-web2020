@@ -9,7 +9,7 @@ const GET_BOOKING = gql`
 	query {
 		bookings {
 			id
-			idn
+			no
 			user {
 				id
 				name
@@ -29,7 +29,6 @@ const GET_BOOKING = gql`
 				}
 			}
 			payment {
-				proposedMethod
 				ticketPrice
 				transactions {
 					value

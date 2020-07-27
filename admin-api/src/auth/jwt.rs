@@ -60,69 +60,9 @@ impl ServerJwt {
 	}
 }
 
-use rocket::{
-	http::Status,
-	request::{self, FromRequest, Request},
-	Outcome, State,
-};
-
 use chrono::Utc;
 
 use crate::wire::jwt::Error;
-
-/// Raw JWTs can be gotten via the request
-/// This should only be used for reauth.
-impl<'a, 'r> FromRequest<'a, 'r> for ServerJwt {
-	type Error = Error;
-
-	fn from_request(request : &'a Request<'r>) -> request::Outcome<ServerJwt, Error> {
-		let jwt : ServerJwt = extract_jwt_from_request(request)?;
-		// let jwt : ServerJwt = validate_jwt_expiry_time(jwt)?;
-
-		Outcome::Success(jwt)
-	}
-}
-
-/// Given a request, extract the JWT struct from the headers in the request.
-fn extract_jwt_from_request(request : &Request) -> request::Outcome<ServerJwt, Error> {
-	let keys : Vec<_> = request.headers().get("Authorization").collect();
-	if keys.len() != 1 {
-		return Outcome::Failure((Status::Unauthorized, Error::MissingToken));
-	};
-
-	let key = keys[0];
-
-	// You can get the state secret from another request guard
-	let jwks : &Jwks = match request.guard::<State<Jwks>>() {
-		Outcome::Success(s) => s.inner(),
-		_ => {
-			println!("Couldn't get jwks from state.");
-			return Outcome::Failure((Status::InternalServerError, Error::InternalServerError));
-		},
-	};
-
-	let authorization_words : Vec<String> = key
-		.to_string()
-		.split_whitespace()
-		.map(String::from)
-		.collect();
-
-	if authorization_words.len() != 2 {
-		return Outcome::Failure((Status::Unauthorized, Error::MalformedToken));
-	}
-	if authorization_words[0] != "Bearer" {
-		return Outcome::Failure((Status::Unauthorized, Error::MalformedToken));
-	}
-	let jwt_str : &str = &authorization_words[1];
-
-	match ServerJwt::decode_jwt_string(jwt_str, jwks) {
-		Ok(jwt) => Outcome::Success(jwt),
-		Err(_) => {
-			println!("Token couldn't be deserialized.");
-			Outcome::Failure((Status::Unauthorized, Error::IllegalToken))
-		},
-	}
-}
 
 trait FromJwt {
 	fn from_jwt(jwt : &Claims) -> Result<Self, RoleError>
@@ -176,47 +116,4 @@ impl FromJwt for AdminUser {
 		}
 	}
 	fn get_uuid(&self) -> String { self.user_uuid.to_string() }
-}
-
-impl<'a, 'r> FromRequest<'a, 'r> for AdminUser {
-	type Error = Error;
-
-	fn from_request(request : &'a Request<'r>) -> request::Outcome<AdminUser, Error> {
-		extract_role_from_request::<AdminUser>(request)
-	}
-}
-
-fn extract_role_from_request<T>(request : &Request) -> request::Outcome<T, Error>
-where
-	T : FromJwt,
-{
-	// Get the jwt from the request's header
-	let jwt : ServerJwt = extract_jwt_from_request(request)?;
-
-	let user = match T::from_jwt(&jwt.0) {
-		Ok(user) => user,
-		Err(_) => {
-			return Outcome::Failure((
-				Status::Forbidden,
-				Error::NotAuthorized {
-					reason : "User does not have that role.",
-				},
-			))
-		},
-	};
-
-	// // Check for stateful banned status
-	// match request.guard::<State<BannedSet>>() {
-	// 	Outcome::Success(set) => {
-	// 		if set.is_user_banned(&user.get_uuid()) {
-	// 			return Outcome::Failure((Status::Unauthorized, Error::BadRequest));
-	// 		}
-	// 	},
-	// 	_ => {
-	// 		println!("Couldn't get banned set from state.");
-	// 		return Outcome::Failure((Status::InternalServerError,
-	// Error::InternalServerError)); 	},
-	// }
-
-	Outcome::Success(user)
 }

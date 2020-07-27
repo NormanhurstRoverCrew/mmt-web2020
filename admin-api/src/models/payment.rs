@@ -1,119 +1,127 @@
-use crate::{db::FromDoc, graphql::context::SharedContext, models::utils::*};
-use mongodb::{oid::ObjectId, Document};
+use crate::{graphql::context::CustomContext, models::TICKET_PRICE, wire::TransactionInput};
+use bson::{doc, oid::ObjectId};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Payment {
-	pub ticket_price :    f64,
-	pub transactions :    Vec<Transaction>,
-	pub proposed_method : TransactionMethod,
+	pub transactions : Vec<Transaction>,
 }
 
-impl FromDoc for Payment {
-	fn from_doc(item : &Document) -> Self {
-		let p = item.get_document("payment").unwrap();
+impl Default for Payment {
+	fn default() -> Self {
 		Self {
-			transactions :    Transaction::get_vec_from_doc(&p),
-			ticket_price :    doc_get_f64(&p, "ticket_price", 40.0),
-			proposed_method : TransactionMethod::from_doc(&p),
+			transactions : vec![],
 		}
 	}
 }
 
-impl Payment {
-	pub fn init(&self, db : &SharedContext, booking_id : &ObjectId) {
-		match db.bookings_handel().update_one(
-			doc! {"_id" => booking_id.to_owned()},
-			doc! {"$set" => {
-				"payments" => [],
-			}},
-			None,
-		) {
-			Ok(_) => {},
-			Err(e) => {
-				eprintln!("{}", e);
-				panic!("could not add payment info to booking");
-			},
-		};
-	}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "type")]
+pub enum Transaction {
+	None,
+	Cash {
+		#[serde(rename = "_id")]
+		id :    ObjectId,
+		value : f64,
+	},
+	ElectronicFundsTransfer {
+		#[serde(rename = "_id")]
+		id :    ObjectId,
+		value : f64,
+	},
+	Stripe {
+		#[serde(rename = "_id")]
+		id :    ObjectId,
+		pi_id : String,
+	},
 }
 
-/// The root order. This holds all details on an order
-///including contact, address and postage information
-#[juniper::graphql_object(Context = SharedContext)]
-impl Payment {
-	fn transactions(&self) -> Vec<Transaction> { self.transactions.to_owned() }
-	fn proposed_method(&self) -> String { self.proposed_method.to_string() }
-	fn ticket_price(&self) -> f64 { self.ticket_price }
-}
-
-#[derive(juniper::GraphQLEnum, Copy, Clone, Debug)]
-pub enum TransactionMethod {
-	Cash,
-	EFT,
-	Stripe,
-	Paypal,
-}
-
-impl FromDoc for TransactionMethod {
-	fn from_doc(item : &Document) -> Self {
-		match item.get_str("transaction_method") {
-			Ok("CASH") => TransactionMethod::Cash,
-			Ok("STRIPE") => TransactionMethod::Stripe,
-			Ok("PAYPAL") => TransactionMethod::Paypal,
-			Ok("EFT") | _ => TransactionMethod::EFT,
-		}
-	}
-}
-
-impl ToString for TransactionMethod {
-	fn to_string(&self) -> String {
-		String::from(match self {
-			TransactionMethod::Cash => "CASH",
-			TransactionMethod::Stripe => "STRIPE",
-			TransactionMethod::Paypal => "PAYPAL",
-			TransactionMethod::EFT => "EFT",
-		})
-	}
-}
-
-#[derive(GraphQLInputObject, Clone, Debug, Copy)]
-pub struct TransactionInput {
-	pub value :  f64,
-	pub method : TransactionMethod,
-}
-
-#[derive(Clone, Debug)]
-pub struct Transaction {
-	id :     String,
-	value :  f64,
-	method : TransactionMethod,
+impl Default for Transaction {
+	fn default() -> Self { Self::None }
 }
 
 impl Transaction {
-	pub fn get_vec_from_doc(doc : &Document) -> Vec<Transaction> {
-		doc.get_array("transactions").map_or_else(
-			|_e| vec![],
-			|t| {
-				t.iter()
-					.map(|t| Transaction::from_doc(t.as_document().unwrap()))
-					.collect::<Vec<Transaction>>()
-			},
-		)
+	pub fn cash(value : f64) -> Self {
+		Self::Cash {
+			id : ObjectId::new().unwrap(),
+			value,
+		}
 	}
-}
 
-impl FromDoc for Transaction {
-	fn from_doc(item : &Document) -> Self {
-		Self {
-			id :     doc_get_id(&item),
-			value :  doc_get_f64(&item, "value", 0.0),
-			method : TransactionMethod::from_doc(&item),
+	pub fn eft(value : f64) -> Self {
+		Self::ElectronicFundsTransfer {
+			id : ObjectId::new().unwrap(),
+			value,
+		}
+	}
+
+	pub fn stripe(pi_id : String) -> Self {
+		Self::Stripe {
+			id : ObjectId::new().unwrap(),
+			pi_id,
+		}
+	}
+
+	fn value(&self) -> f64 {
+		match self {
+			Self::Cash {
+				value, ..
+			} => *value,
+			Self::ElectronicFundsTransfer {
+				value, ..
+			} => *value,
+			_ => -999.9,
+		}
+	}
+
+	fn method(&self) -> &str {
+		match self {
+			Self::Cash {
+				..
+			} => "CASH",
+			Self::ElectronicFundsTransfer {
+				..
+			} => "EFT",
+			Self::Stripe {
+				..
+			} => "STRIPE",
+			Self::None => "UNKNOWN",
 		}
 	}
 }
 
-#[juniper::graphql_object(Context=SharedContext)]
+#[juniper::graphql_object(Context = CustomContext)]
 impl Transaction {
-	fn value(&self) -> f64 { self.value }
-	fn method(&self) -> TransactionMethod { self.method }
+	/// Contact details
+	fn method(&self) -> &str { self.method() }
+
+	fn value(&self) -> f64 { self.value() }
+}
+
+impl From<TransactionInput> for Transaction {
+	fn from(input : TransactionInput) -> Self {
+		let id = ObjectId::new().unwrap();
+
+		match input.method.as_str() {
+			"Cash" => Transaction::Cash {
+				value : input.value,
+				id,
+			},
+			"ElectronicFundsTransfer" => Transaction::ElectronicFundsTransfer {
+				value : input.value,
+				id,
+			},
+			_ => Transaction::None,
+		}
+	}
+}
+
+#[juniper::graphql_object(Context = CustomContext)]
+impl Payment {
+	/// Contact details
+	fn transactions(&self, context : &CustomContext) -> Vec<Transaction> {
+		self.transactions.clone()
+	}
+
+	fn ticket_price(&self) -> f64 { TICKET_PRICE }
 }

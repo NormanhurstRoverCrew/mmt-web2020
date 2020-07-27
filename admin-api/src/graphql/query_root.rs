@@ -1,17 +1,17 @@
-use crate::{db::helpers as DBHelper, graphql::context::SharedContext, models::Booking};
+use crate::{db::helpers as DBHelper, graphql::context::CustomContext, models::Booking};
 use juniper::FieldResult;
 
 pub struct QueryRoot;
 #[juniper::graphql_object(
-    Context = SharedContext,
+    Context = CustomContext,
 )]
 impl QueryRoot {
 	/// All bookings
-	fn bookings(context : &SharedContext) -> FieldResult<Vec<Booking>> {
+	async fn bookings(context : &CustomContext) -> FieldResult<Vec<Booking>> {
 		let bookings = context.bookings_handel();
 
 		let booking = DBHelper::all(&bookings);
 
-		Ok(booking)
+		Ok(booking.await)
 	}
 }

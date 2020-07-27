@@ -13,17 +13,17 @@ path = "src/bin/main.rs"
 name = "mmtapi"
 
 [dependencies]
-rocket = { version = "0.4", default-features = false }
-rocket_contrib = { version = "0.4", default-features = false, features = ["json", "mongodb_pool"] }
-bson = "0.14.0"
-mongodb = "0.3"
+# rocket = { version = "0.4", default-features = false }
+# rocket_contrib = { version = "0.4", default-features = false, features = ["json", "mongodb_pool"] }
+mongodb = "0.10"
+bson = "0.14"
 #juniper = "0.14.2"
 futures = "0.3.1"
 juniper= { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
 # juniper_rocket = "0.5.0"
 juniper_rocket = { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
-rocket_cors = "0.5.2"
-stripe-rust = { version = "0.12.1", default-features = false, features = ["blocking", "checkout"] }
+# rocket_cors = "0.5.2"
+stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async", "default-tls", "events"], git = "https://github.com/grantperry/stripe-rs.git", branch = "payment-intent-update-payment-method" }
 rand = "0.7"
 lettre = { git = "https://github.com/lettre/lettre" }
 email = { version = "^0.0.20" }
@@ -38,4 +38,10 @@ chrono = { version = "0.4", features = ["serde"] }
 
 reqwest = { version = "0.10", features = ["json", "blocking"] }
 
-sentry = { version = "0.18.0", features = ["with_debug_to_log"] }
+actix-web = "2.0.0"
+actix-web-httpauth = { git = "https://github.com/actix/actix-web-httpauth" }
+actix-cors = "0.2"
+actix-service = "1.0.1"
+alcoholic_jwt = "1.0.0"
+actix-rt = "1.0.0"
+env_logger = "0.7.1"

@@ -1,7 +1,7 @@
 use juniper::graphql_value;
 
-pub fn string_to_id(id : &str) -> Result<mongodb::oid::ObjectId, juniper::FieldError> {
-	match mongodb::oid::ObjectId::with_string(&id) {
+pub fn string_to_id(id : &str) -> Result<bson::oid::ObjectId, juniper::FieldError> {
+	match bson::oid::ObjectId::with_string(&id) {
 		Ok(oid) => Ok(oid),
 		Err(_) => Err(juniper::FieldError::new(
 			"UID is not valid",
@@ -12,7 +12,7 @@ pub fn string_to_id(id : &str) -> Result<mongodb::oid::ObjectId, juniper::FieldE
 	}
 }
 
-pub fn bson_to_id(id : &mongodb::Bson) -> Result<&mongodb::oid::ObjectId, juniper::FieldError> {
+pub fn bson_to_id(id : &bson::Bson) -> Result<&bson::oid::ObjectId, juniper::FieldError> {
 	match id.as_object_id() {
 		Some(oid) => Ok(oid),
 		None => Err(juniper::FieldError::new(

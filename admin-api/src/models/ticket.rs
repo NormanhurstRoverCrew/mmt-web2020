@@ -1,28 +1,42 @@
 use crate::{
-	db::{helpers as DBHelper, FromDoc},
-	graphql::context::SharedContext,
-	models::{utils::*, Booking, User, UserUpdate},
+	db::{helpers as DBHelper},
+	graphql::context::CustomContext,
+	models::{UserUpdate, Booking, User},
 };
+use bson::{doc, oid::ObjectId, Document};
 use juniper::ID;
-use mongodb::{oid::ObjectId, Document};
+use serde::{Deserialize, Serialize};
+
+pub const TICKET_PRICE : f64 = 30.0;
 
 #[derive(GraphQLInputObject, Clone, Debug)]
 pub struct TicketUpdate {
-	pub id :   String,
+	pub id :   ObjectId,
 	pub user : UserUpdate,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Ticket {
-	pub id :  String,
-	user_id : String,
+	#[serde(rename = "_id")]
+	pub id :     ObjectId,
+	user_id :    ObjectId,
+	booking_id : ObjectId,
 }
 
 impl Ticket {
 	pub fn default() -> Self {
 		Self {
-			id :      String::default(),
-			user_id : String::default(),
+			id :         ObjectId::new().unwrap(),
+			user_id :    ObjectId::new().unwrap(),
+			booking_id : ObjectId::new().unwrap(),
+		}
+	}
+
+	pub fn new(booking_id : &ObjectId, user_id : &ObjectId) -> Self {
+		Self {
+			booking_id : booking_id.clone(),
+			user_id : user_id.clone(),
+			..Self::default()
 		}
 	}
 
@@ -32,57 +46,28 @@ impl Ticket {
 		None
 	}
 
-	pub fn get_user_id(&self) -> ObjectId {
-		ObjectId::with_string(&self.user_id).expect("User id could not be converted to ObjectID")
-	}
+	pub fn get_user_id(&self) -> &ObjectId { &self.user_id }
 
-	pub fn get_user_id_opt(&self) -> Option<ObjectId> { ObjectId::with_string(&self.user_id).ok() }
+	pub fn get_user_id_opt(&self) -> Option<ObjectId> { Some(self.user_id.to_owned()) }
 
-	pub fn get_user(&self, db : &SharedContext) -> Option<User> {
+	pub async fn get_user(&self, db : &CustomContext) -> Option<User> {
 		DBHelper::find::<User>(
 			&db.users_handel(),
 			doc! {
-				"_id" => ObjectId::with_string(&self.user_id).expect("User id could not be converted to ObjectID"),
+				"_id" => &self.user_id
 			},
 		)
-	}
-
-	pub fn delete(&self, db : &SharedContext) -> bool {
-		db.users_handel()
-			.delete_one(
-				doc! {
-					"_id" => ObjectId::with_string(&self.user_id).expect("User id could not be converted to ObjectID"),
-				},
-				None,
-			)
-			.and_then(|_| {
-				db.tickets_handel().delete_one(
-					doc! {
-						"_id" => ObjectId::with_string(&self.id).expect("User id could not be converted to ObjectID"),
-					},
-					None,
-				)
-			})
-			.is_ok()
+		.await
 	}
 }
 
-impl FromDoc for Ticket {
-	fn from_doc(item : &Document) -> Self {
-		Self {
-			id :      doc_get_id(item),
-			user_id : doc_get_id_key(item, "user_id"),
-		}
-	}
-}
-
-#[juniper::graphql_object(Context = SharedContext)]
+#[juniper::graphql_object(Context = CustomContext)]
 impl Ticket {
 	// object: "Contact Details of the person making the purchase"
 
-	fn id(&self) -> ID { ID::from(self.id.to_owned()) }
+	fn id(&self) -> ID { ID::from(self.id.to_hex()) }
 
 	fn booking(&self) -> Option<Booking> { self.get_booking() }
 
-	fn user(&self, context : &SharedContext) -> Option<User> { self.get_user(context) }
+	async fn user(&self, context : &CustomContext) -> Option<User> { self.get_user(context).await }
 }

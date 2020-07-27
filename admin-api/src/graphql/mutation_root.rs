@@ -1,148 +1,150 @@
 use crate::{
 	db::helpers as DBHelper,
-	graphql::{context::SharedContext, util::string_to_id},
-	models::{Booking, Ticket, TicketUpdate, TransactionInput},
+	graphql::{context::CustomContext, util::string_to_id},
+	models::{Booking, Ticket, TicketUpdate,  User, UserUpdate},
+    wire::TransactionInput,
+    models::Transaction,
 };
+use bson::{doc, oid::ObjectId, Document, Bson};
 use juniper::{graphql_value, FieldError, FieldResult};
-use mongodb::{oid::ObjectId, Document};
 use std::iter::Iterator;
+use futures::{stream::FuturesUnordered, StreamExt};
 
 pub struct MutationRoot;
 #[juniper::graphql_object(
-    Context = SharedContext
+    Context = CustomContext
 )]
 impl MutationRoot {
-	fn update_tickets(
-		context : &SharedContext,
-		tickets : Vec<TicketUpdate>,
-	) -> FieldResult<Vec<Ticket>> {
-		let _ = tickets
-			.iter()
-			.map(|ticket| {
-				let tdb = DBHelper::get(
-					&context.tickets_handel(),
-					&string_to_id(&ticket.id).unwrap(),
-				);
-				(ticket, tdb)
-			})
-			.collect::<Vec<(&TicketUpdate, Option<Ticket>)>>()
-			.iter()
-			.map(|(ticket, tdb)| (ticket, tdb.as_ref().map(|t| t.get_user_id_opt())))
-			.collect::<Vec<(&&TicketUpdate, Option<Option<ObjectId>>)>>()
-			.iter()
-			.map(|(ticket, user_id)| (ticket, user_id.clone().flatten()))
-			.collect::<Vec<(&&&TicketUpdate, Option<ObjectId>)>>()
-			.iter()
-			.filter_map(|(ticket, user_id)| {
-				user_id.as_ref().map(|user_id| (ticket.to_owned(), user_id))
-			})
-			.collect::<Vec<(&&&TicketUpdate, &ObjectId)>>()
-			.iter()
-			.map(|(ticket, user_id)| {
-				(
-					doc! {
-						"$set" => {
-							"name" => &ticket.user.name,
-							"mobile" => &ticket.user.mobile,
-							"email" => &ticket.user.email,
-							"crew" => &ticket.user.crew,
-						}
-					},
-					doc! {
-						"_id" => user_id.to_owned().to_owned()
-					},
-				)
-			})
-			.collect::<Vec<(Document, Document)>>()
-			.iter()
-			.map(|(doc, user_id)| {
-				match context
-					.users_handel()
-					.update_one(user_id.to_owned(), doc.to_owned(), None)
-				{
-					Ok(_) => Some(()),
-					Err(_) => None,
-				}
-			})
-			.collect::<Vec<Option<()>>>();
+            async fn update_tickets(
+                context : &CustomContext,
+                tickets : Vec<TicketUpdate>,
+        ) -> FieldResult<Vec<Ticket>> {
+                let get_ticket =
+                        |id : ObjectId| async move { DBHelper::get(&context.tickets_handel(), &id).await };
 
-		let tickets = tickets
-			.iter()
-			.filter_map(|ticket| string_to_id(&ticket.id).ok())
-			.collect::<Vec<ObjectId>>()
-			.iter()
-			.filter_map(|tid| DBHelper::get(&context.tickets_handel(), &tid))
-			.collect::<Vec<Ticket>>();
+                let update_ticket = |user_id : Document, data : Document| async move {
+                        let _ = context
+                                .users_handel()
+                                .update_one(user_id.to_owned(), data.to_owned(), None)
+                                .await;
+                };
 
-		Ok(tickets)
-	}
+                tickets
+                        .iter()
+                        .map(|ticket| get_ticket(ticket.id.clone()))
+                        .collect::<FuturesUnordered<_>>()
+                        .collect::<Vec<Option<Ticket>>>()
+                        .await
+                        .iter()
+                        .zip(tickets.iter())
+                                    .map(|(tdb, ticket): (&Option<Ticket>, &TicketUpdate)| -> (&TicketUpdate, Option<Option<ObjectId>>){
+                            (ticket, tdb.as_ref().map(|t|
+                                t.get_user_id_opt())
+                            )
+                        })
+                        .filter_map(|(ticket, user_id)| { user_id.flatten().map(|user_id| (ticket, user_id)) })
+                                    .map(|(ticket, user_id)| {
+                            let user : Bson = bson::to_bson(&ticket.user).unwrap();
+                            let user = user.as_document().unwrap();
+                                            (
+                                                    doc! {
+                                                            "$set" => user,
+                                                    },
+                                                    doc! {
+                                                            "_id" => user_id
+                                                    },
+                                            )
+                                    })
+                                    .map(|(doc, user_id)| {
+                            update_ticket(user_id, doc)
+                        })
+                        .collect::<FuturesUnordered<_>>()
+                            .collect::<()>()
+                            .await;
 
-	fn update_ticket(context : &SharedContext, ticket : TicketUpdate) -> FieldResult<Ticket> {
-		let t : Option<Ticket> = DBHelper::get(
+                // let futures = tickets
+                //      .iter()
+                //      .map(|ticket| {
+                //         Box::pin(get_tickets(&ticket.id))
+                //      })
+                //      .collect::<Vec<Pin<Box<dyn Future<Output = Option<Ticket>>>>>>();
+
+
+
+                Ok(tickets
+                        .iter()
+                        .map(|ticket| get_ticket(ticket.id.clone()))
+                        .collect::<FuturesUnordered<_>>()
+                        .filter_map(|a| async move {a})
+                        .collect::<Vec<Ticket>>()
+                        .await)
+
+        }
+
+	async fn update_ticket(context : &CustomContext, ticket : TicketUpdate) -> FieldResult<Ticket> {
+		match DBHelper::get::<Ticket>(
 			&context.tickets_handel(),
-			&string_to_id(&ticket.id).expect("Ticket ID"),
-		);
-		dbg!(&ticket);
-		if let Some(t) = &t {
+			&ticket.id,
+		).await {
+            Some(t) => {
+
+                let user :Bson = bson::to_bson(&ticket.user).unwrap();
+
 			&context.users_handel().update_one(
 				doc! {
 					"_id" => t.get_user_id(),
 				},
 				doc! {
-					"$set" => {
-						"name" => ticket.user.name,
-						"email" => ticket.user.email,
-						"crew" => ticket.user.crew,
-						"mobile" => ticket.user.mobile,
-						"diet" => ticket.user.diet,
-						"email_verified" => ticket.user.email_verified,
-					}
-				},
+					"$set" => user,
+                },
 				None,
 			);
-		}
-
-		Ok(t.unwrap())
+            
+            Ok(t)
+            },
+            None => Err(FieldError::new(
+							"Could not find ticket to update",
+							graphql_value!({"type":"TICKET_NOT_FOUND"}),
+						))
+        }
 	}
 
-	fn delete_tickets(context : &SharedContext, ticket_ids : Vec<String>) -> FieldResult<f64> {
-		let tickets = ticket_ids
-			.iter()
+	async fn delete_tickets(context : &CustomContext, ticket_ids : Vec<String>) -> FieldResult<f64> {
+        let ticket_ids = ticket_ids
+            .iter()
 			.filter_map(|id| string_to_id(id).ok())
-			.collect::<Vec<ObjectId>>()
-			.iter()
-			.filter_map(|id| DBHelper::get(&context.tickets_handel(), id))
-			.collect::<Vec<Ticket>>();
+            .collect::<Vec<ObjectId>>();
 
-		let mut out : u64 = 0;
-		for ticket in tickets {
-			out += ticket.delete(&context) as u64;
-		}
-
-		Ok(out as f64)
+        context.tickets_handel().delete_many(doc! {
+            "_id" => {
+                "$in" => ticket_ids,
+            }
+        }, None)
+        .await
+        .map(|dr| dr.deleted_count as f64)
+        .map_err(|_| FieldError::new("Failed to delete Tickets from DB", graphql_value!({"type":"DB_ERROR"})))
 	}
 
-	fn addTransaction(
-		context : &SharedContext,
+	async fn addTransaction(
+		context : &CustomContext,
 		booking_id : String,
 		transaction : TransactionInput,
 	) -> FieldResult<bool> {
-		if context.auth.permissions.payments_add {
+        let transaction : Transaction = transaction.into();
+		// if context.auth.permissions.payments_add {
+            let transaction : Bson = bson::to_bson(&transaction).unwrap();
 			context
 				.bookings_handel()
 				.update_one(
 					doc! {"_id"=>string_to_id(&booking_id).unwrap()},
 					doc! {
 					"$push" => {
-						"payment.transactions" => {
-							"_id" => ObjectId::new().unwrap(),
-							"value" => transaction.value,
-							"method" => transaction.method.to_string()
-						}
+						"payment.transactions" => transaction,
 					}
 					},
 					None,
 				)
+                .await
 				.map_or_else(
 					|_| {
 						Err(FieldError::new(
@@ -152,22 +154,22 @@ impl MutationRoot {
 					},
 					|_| Ok(true),
 				)
-		} else {
-			Err(FieldError::new(
-				"Not Authorized to create transactions",
-				graphql_value!({"type":"UNAUTHORIZED_PAYMENTS_ADD"}),
-			))
-		}
+		// } else {
+		// 	Err(FieldError::new(
+		// 		"Not Authorized to create transactions",
+		// 		graphql_value!({"type":"UNAUTHORIZED_PAYMENTS_ADD"}),
+		// 	))
+		// }
 	}
 
-	fn delete_Booking(context : &SharedContext, booking_id : String) -> FieldResult<bool> {
-		let booking = DBHelper::get::<Booking>(
+	async fn delete_booking(context : &CustomContext, booking_id : String) -> FieldResult<bool> {
+		match DBHelper::get::<Booking>(
 			&context.bookings_handel(),
 			&string_to_id(&booking_id).expect("ObjectID"),
-		);
+		).await
 
-		match booking {
-			Some(b) => Ok(b.delete(&context)),
+		{
+			Some(b) => Ok(b.delete(&context).await),
 			None => Err(FieldError::new(
 				"Booking not found",
 				graphql_value!({"type":"BOOKING_NOT_FOUND"}),

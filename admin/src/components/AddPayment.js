@@ -25,7 +25,7 @@ export const AddPayment = ({classes, booking, close}) => {
 
 	const [payment, updatePayment] = useState({
 		value: p.remaining,
-		method: 'EFT',
+		method: 'ElectronicFundsTransfer',
 	});
 
 	const onInputUpdate = e => {
@@ -71,10 +71,10 @@ export const AddPayment = ({classes, booking, close}) => {
 				<MenuItem value="">
 					<em>None</em>
 				</MenuItem>
-				<MenuItem value="STRIPE">Stripe</MenuItem>
-				<MenuItem value="PAYPAL">Paypal</MenuItem>
-				<MenuItem value="EFT">Electronic Funds Transfer</MenuItem>
-				<MenuItem value="CASH">Cash</MenuItem>
+				<MenuItem value="Stripe">Stripe</MenuItem>
+				<MenuItem value="Paypal">Paypal</MenuItem>
+				<MenuItem value="ElectronicFundsTransfer">Electronic Funds Transfer</MenuItem>
+				<MenuItem value="Cash">Cash</MenuItem>
 			</Select>
 			<Typography className={classNames(classes.padItems)}>
 				Note: Creating a payment will automatically send a receipt.
