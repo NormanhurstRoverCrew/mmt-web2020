@@ -1,11 +1,11 @@
 use crate::{
-	db::helpers as DBHelper,
+	db::Db,
 	graphql::context::CustomContext,
 	models::{Booking, Ticket},
 };
 use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(GraphQLInputObject, Clone, Debug)]
 pub struct BasicUser {
@@ -40,6 +40,10 @@ pub struct User {
 	code : Option<String>,
 }
 
+impl Db<'_> for User {
+	const COLLECTION : &'static str = "users";
+}
+
 impl User {
 	pub fn default() -> Self {
 		Self {
@@ -55,22 +59,21 @@ impl User {
 	}
 
 	pub fn is_code_valid(&self, code : &str) -> Result<(), String> {
-        match &self.code {
-            Some(real) => match code {
-		    	"" => Err(String::from("Code is an empty string")),
-		    	c if c == real => Ok(()),
-		    	_ => Err(String::from("Supplied code is incorrect")),
-		    }
-		    	_ => Err(String::from("Code was never generated...")),
-        }
+		match &self.code {
+			Some(real) => match code {
+				"" => Err(String::from("Code is an empty string")),
+				c if c == real => Ok(()),
+				_ => Err(String::from("Supplied code is incorrect")),
+			},
+			_ => Err(String::from("Code was never generated...")),
+		}
 	}
 
 	pub fn get_code(&self) -> Option<&str> { self.code.as_ref().map(|c| c.as_str()) }
 
 	pub async fn get_booking(&self, db : &CustomContext) -> Option<Booking> {
-		let bookings = db.bookings_handel();
-		let booking = DBHelper::find::<Booking>(
-			&bookings,
+		let booking = Booking::find(
+			&db,
 			doc! {
 				"user_id" => &self.id,
 			},
@@ -120,7 +123,11 @@ impl User {
 	/// Has this users email been verified?
 	fn email_verified(&self) -> bool { self.email_verified }
 
-	async fn booking(&self, context : &CustomContext) -> Option<Booking> { self.get_booking(context).await }
+	async fn booking(&self, context : &CustomContext) -> Option<Booking> {
+		self.get_booking(context).await
+	}
 
-	async fn ticket(&self, context : &CustomContext) -> Option<Ticket> { self.get_ticket(context).await }
+	async fn ticket(&self, context : &CustomContext) -> Option<Ticket> {
+		self.get_ticket(context).await
+	}
 }

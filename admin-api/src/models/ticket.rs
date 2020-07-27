@@ -1,13 +1,11 @@
 use crate::{
-	db::{helpers as DBHelper},
+	db::Db,
 	graphql::context::CustomContext,
-	models::{UserUpdate, Booking, User},
+	models::{Booking, User, UserUpdate},
 };
 use bson::{doc, oid::ObjectId, Document};
 use juniper::ID;
 use serde::{Deserialize, Serialize};
-
-pub const TICKET_PRICE : f64 = 30.0;
 
 #[derive(GraphQLInputObject, Clone, Debug)]
 pub struct TicketUpdate {
@@ -21,6 +19,10 @@ pub struct Ticket {
 	pub id :     ObjectId,
 	user_id :    ObjectId,
 	booking_id : ObjectId,
+}
+
+impl Db<'_> for Ticket {
+	const COLLECTION : &'static str = "tickets";
 }
 
 impl Ticket {
@@ -51,13 +53,7 @@ impl Ticket {
 	pub fn get_user_id_opt(&self) -> Option<ObjectId> { Some(self.user_id.to_owned()) }
 
 	pub async fn get_user(&self, db : &CustomContext) -> Option<User> {
-		DBHelper::find::<User>(
-			&db.users_handel(),
-			doc! {
-				"_id" => &self.user_id
-			},
-		)
-		.await
+		User::get(&db, &self.user_id).await
 	}
 }
 

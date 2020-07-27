@@ -1,4 +1,8 @@
-use crate::{db::helpers as DBHelper, graphql::context::CustomContext, models::Booking};
+use crate::{
+	db::Db,
+	graphql::context::CustomContext,
+	models::{Booking, Vehicle},
+};
 use juniper::FieldResult;
 
 pub struct QueryRoot;
@@ -8,10 +12,11 @@ pub struct QueryRoot;
 impl QueryRoot {
 	/// All bookings
 	async fn bookings(context : &CustomContext) -> FieldResult<Vec<Booking>> {
-		let bookings = context.bookings_handel();
+		Ok(Booking::all(&context).await)
+	}
 
-		let booking = DBHelper::all(&bookings);
-
-		Ok(booking.await)
+	/// All vehicles
+	async fn vehicles(context : &CustomContext) -> FieldResult<Vec<Vehicle>> {
+		Ok(Vehicle::all(&context).await)
 	}
 }
