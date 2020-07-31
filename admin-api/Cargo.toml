@@ -15,11 +15,12 @@ name = "mmtapi"
 [dependencies]
 # rocket = { version = "0.4", default-features = false }
 # rocket_contrib = { version = "0.4", default-features = false, features = ["json", "mongodb_pool"] }
-mongodb = "0.10"
-bson = "0.14"
+mongodb = "1.0.0"
+bson = "1.0.0"
 #juniper = "0.14.2"
 futures = "0.3.1"
-juniper= { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
+# juniper= { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
+juniper= { git="https://github.com/graphql-rust/juniper.git", rev="84c9720b535c37dfc1d8bc6b142bf2f63e5fd166" }
 # juniper_rocket = "0.5.0"
 # juniper_rocket = { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
 # rocket_cors = "0.5.2"

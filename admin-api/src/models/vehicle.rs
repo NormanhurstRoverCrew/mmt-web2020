@@ -23,7 +23,7 @@ impl Vehicle {
 	pub fn new(rego : String, driver : &Ticket) -> Option<Self> {
 		match rego {
 			rego if rego.len() <= 6 => Some(Self {
-				id : ObjectId::new().unwrap(),
+				id : ObjectId::new(),
 				rego,
 				driver_ticket : driver.id.clone(),
 			}),

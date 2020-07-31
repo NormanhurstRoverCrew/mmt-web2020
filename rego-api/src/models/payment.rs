@@ -43,21 +43,21 @@ impl Default for Transaction {
 impl Transaction {
 	pub fn cash(amount : f64) -> Self {
 		Self::Cash {
-			id : ObjectId::new().unwrap(),
+			id : ObjectId::new(),
 			amount,
 		}
 	}
 
 	pub fn eft(amount : f64) -> Self {
 		Self::ElectronicFundsTransfer {
-			id : ObjectId::new().unwrap(),
+			id : ObjectId::new(),
 			amount,
 		}
 	}
 
 	pub fn stripe(pi_id : String) -> Self {
 		Self::Stripe {
-			id : ObjectId::new().unwrap(),
+			id : ObjectId::new(),
 			pi_id,
 		}
 	}

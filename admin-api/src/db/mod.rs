@@ -36,7 +36,7 @@ pub trait Db<'a>: Send + Sized + Deserialize<'static> + 'static {
 		Self::find(
 			context,
 			doc! {
-					"_id" => id,
+					"_id" : id,
 			},
 		)
 		.await

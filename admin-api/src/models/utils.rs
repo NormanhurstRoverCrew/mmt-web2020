@@ -5,7 +5,7 @@ pub fn doc_get_id(item : &Document) -> String { doc_get_id_key(item, "_id") }
 pub fn doc_get_id_key(item : &Document, key : &str) -> String {
 	match item.get_object_id(key) {
 		Ok(oid) => oid.to_string(),
-		_ => ObjectId::new().unwrap().to_string(),
+		_ => ObjectId::new().to_string(),
 	}
 }
 

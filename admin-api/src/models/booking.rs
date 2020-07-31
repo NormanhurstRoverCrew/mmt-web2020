@@ -32,8 +32,8 @@ struct BookingUserOnly {}
 impl Default for Booking {
 	fn default() -> Self {
 		Self {
-			id :      ObjectId::new().unwrap(),
-			user_id : ObjectId::new().unwrap(),
+			id :      ObjectId::new(),
+			user_id : ObjectId::new(),
 			no :      999999,
 			tickets : vec![],
 			payment : Payment::default(),
@@ -93,7 +93,7 @@ impl Booking {
 		let tickets : Vec<Ticket> = Ticket::search(
 			&db,
 			doc! {
-					"booking_id" => &self.id,
+					"booking_id" : &self.id,
 			},
 		)
 		.await;
@@ -231,7 +231,7 @@ impl Booking {
 			.bookings_handel()
 			.update_one(
 				doc! {
-						"_id" => &self.id,
+						"_id" : &self.id,
 				},
 				doc,
 				None,

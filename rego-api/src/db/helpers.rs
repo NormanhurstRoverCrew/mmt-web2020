@@ -17,7 +17,7 @@ pub async fn get<'a, T : Deserialize<'a>>(coll : &'a Collection, id : &ObjectId)
 	find(
 		coll,
 		doc! {
-			"_id" => id,
+			"_id" : id,
 		},
 	)
 	.await

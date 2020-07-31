@@ -47,7 +47,7 @@ impl Db<'_> for User {
 impl User {
 	pub fn default() -> Self {
 		Self {
-			id :             ObjectId::new().unwrap(),
+			id :             ObjectId::new(),
 			name :           "".to_string(),
 			email :          "".to_string(),
 			mobile :         "".to_string(),
@@ -75,7 +75,7 @@ impl User {
 		let booking = Booking::find(
 			&db,
 			doc! {
-				"user_id" => &self.id,
+				"user_id" : &self.id,
 			},
 		);
 

@@ -18,11 +18,11 @@ name = "mmtapi"
 # rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket", branch = "async", default-features = false, features = ["json", "mongodb_pool"] }
 # rocket_cors = "0.5.1"
 # rocket_contrib = { version = "0.4.2", default-features = false, features = ["json", "mongodb_pool"] }
-bson = "0.14"
-mongodb = "0.10"
+bson = "1.0.0"
+mongodb = "1.0.0"
 # juniper = "0.14"
 # juniper_rocket = "0.5"
-juniper= { git="https://github.com/graphql-rust/juniper.git", rev="358ca27d28fd6e5497effcf097e2729193ad0d50" }
+juniper= { git="https://github.com/graphql-rust/juniper.git", rev="84c9720b535c37dfc1d8bc6b142bf2f63e5fd16" }
 # juniper_rocket_async = { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
 # stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async"] }
 stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async", "default-tls", "events"], git = "https://github.com/grantperry/stripe-rs.git", branch = "payment-intent-update-payment-method" }

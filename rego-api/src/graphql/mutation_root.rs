@@ -207,10 +207,10 @@ impl MutationRoot {
                 let user = user.as_document().unwrap();
 				(
 					doc! {
-						"$set" => user,
+						"$set" : user,
 					},
 					doc! {
-						"_id" => user_id
+						"_id" : user_id
 					},
 				)
 			})

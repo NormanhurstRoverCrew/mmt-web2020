@@ -28,9 +28,9 @@ impl Db<'_> for Ticket {
 impl Ticket {
 	pub fn default() -> Self {
 		Self {
-			id :         ObjectId::new().unwrap(),
-			user_id :    ObjectId::new().unwrap(),
-			booking_id : ObjectId::new().unwrap(),
+			id :         ObjectId::new(),
+			user_id :    ObjectId::new(),
+			booking_id : ObjectId::new(),
 		}
 	}
 

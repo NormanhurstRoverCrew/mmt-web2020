@@ -43,21 +43,21 @@ impl Default for Transaction {
 impl Transaction {
 	pub fn cash(value : f64) -> Self {
 		Self::Cash {
-			id : ObjectId::new().unwrap(),
+			id : ObjectId::new(),
 			value,
 		}
 	}
 
 	pub fn eft(value : f64) -> Self {
 		Self::ElectronicFundsTransfer {
-			id : ObjectId::new().unwrap(),
+			id : ObjectId::new(),
 			value,
 		}
 	}
 
 	pub fn stripe(pi_id : String) -> Self {
 		Self::Stripe {
-			id : ObjectId::new().unwrap(),
+			id : ObjectId::new(),
 			pi_id,
 		}
 	}
@@ -100,7 +100,7 @@ impl Transaction {
 
 impl From<TransactionInput> for Transaction {
 	fn from(input : TransactionInput) -> Self {
-		let id = ObjectId::new().unwrap();
+		let id = ObjectId::new();
 
 		match input.method.as_str() {
 			"Cash" => Transaction::Cash {

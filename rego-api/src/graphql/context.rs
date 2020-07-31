@@ -18,11 +18,11 @@ impl CustomContext {
 			match indexes
 				.find_one_and_update(
 					doc! {
-						"name" => i,
+						"name" : i,
 					},
 					doc! {
-						"$inc" => {
-							"seq" => 1,
+						"$inc" : {
+							"seq" : 1,
 						}
 					},
 					None,
@@ -36,8 +36,8 @@ impl CustomContext {
 					indexes
 						.insert_one(
 							doc! {
-								"name" => i,
-								"seq" => 1,
+								"name" : i,
+								"seq" : 1,
 							},
 							None,
 						)

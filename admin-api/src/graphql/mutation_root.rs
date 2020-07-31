@@ -46,10 +46,10 @@ impl MutationRoot {
                             let user = user.as_document().unwrap();
                                             (
                                                     doc! {
-                                                            "$set" => user,
+                                                            "$set" : user,
                                                     },
                                                     doc! {
-                                                            "_id" => user_id
+                                                            "_id" :user_id
                                                     },
                                             )
                                     })
@@ -83,10 +83,10 @@ impl MutationRoot {
 
 				&context.users_handel().update_one(
 					doc! {
-						"_id" => t.get_user_id(),
+						"_id" : t.get_user_id(),
 					},
 					doc! {
-						"$set" => user,
+						"$set" : user,
 					},
 					None,
 				);
@@ -113,8 +113,8 @@ impl MutationRoot {
 			.tickets_handel()
 			.delete_many(
 				doc! {
-					"_id" => {
-						"$in" => ticket_ids,
+					"_id" : {
+						"$in" : ticket_ids,
 					}
 				},
 				None,
@@ -140,10 +140,10 @@ impl MutationRoot {
 		context
 			.bookings_handel()
 			.update_one(
-				doc! {"_id"=>string_to_id(&booking_id).unwrap()},
+				doc! {"_id": string_to_id(&booking_id).unwrap()},
 				doc! {
-				"$push" => {
-					"payment.transactions" => transaction,
+				"$push" : {
+					"payment.transactions" : transaction,
 				}
 				},
 				None,

@@ -46,7 +46,7 @@ pub struct User {
 impl User {
 	pub fn default() -> Self {
 		Self {
-			id :             ObjectId::new().expect("OID"),
+			id :             ObjectId::new(),
 			name :           "".to_string(),
 			email :          "".to_string(),
 			mobile :         "".to_string(),
@@ -78,10 +78,10 @@ impl User {
 				.users_handel()
 				.update_one(
 					doc! {
-						"_id" => &self.id,
+						"_id" : &self.id,
 					},
 					doc! {
-						"$set" => doc,
+						"$set" : doc,
 					},
 					None,
 				)
@@ -94,7 +94,7 @@ impl User {
 		let booking = DBHelper::find::<Booking>(
 			&bookings,
 			doc! {
-				"user_id" => &self.id,
+				"user_id" : &self.id,
 			},
 		);
 
