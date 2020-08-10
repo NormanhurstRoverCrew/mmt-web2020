@@ -1,5 +1,5 @@
 use crate::{
-	db::helpers as DBHelper,
+    db::Db,
 	graphql::{
 		context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot,
 		util::string_to_id,
@@ -107,7 +107,7 @@ async fn handle_pi_update(
 
 	if let Ok((booking_id, pi)) = &booking_id {
 		let mut booking : Booking =
-			match DBHelper::get(&context.bookings_handel(), &booking_id).await {
+			match Booking::get(&context, &booking_id).await {
 				Some(b) => b,
 				None => {
 					return Err(PaymentError::CouldNotCommit);

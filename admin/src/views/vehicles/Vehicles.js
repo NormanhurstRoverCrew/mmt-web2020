@@ -3,15 +3,15 @@ import { connect } from "react-redux";
 import PropTypes from "prop-types";
 import { withStyles } from "@material-ui/core/styles";
 import Title from "components/common/Title";
-import TeamTable from "./TeamTable";
+import VehicleTable from "./VehicleTable";
 
-export const Teams = () => (
+export const Vehicles = () => (
 			<>
-				<Title>Teams</Title>
-				<TeamTable />
+				<Title>Vehicles</Title>
+				<VehicleTable />
 			</>
 );
 
-Teams.propTypes = {};
+Vehicles.propTypes = {};
 
-export default Teams;
+export default Vehicles;

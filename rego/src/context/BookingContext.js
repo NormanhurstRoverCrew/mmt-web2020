@@ -8,7 +8,7 @@ export const BookingContext = createContext();
 const TICKET_PRICE = 40.0;
 
 const GET_BOOKING = gql`
-	query GetBooking($id: String!) {
+	query GetBooking($id: ObjectId!) {
 		bookingFromUser(id: $id) {
 			id
 			no

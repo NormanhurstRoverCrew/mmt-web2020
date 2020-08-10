@@ -1,7 +1,9 @@
-FROM node:8-alpine
+FROM node:10-alpine
 
 WORKDIR /usr/src
 USER root
+
+RUN apk add git
 
 #https://github.com/npm/npm/issues/20861
 RUN npm config set unsafe-perm true

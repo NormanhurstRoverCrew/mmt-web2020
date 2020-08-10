@@ -33,7 +33,7 @@ pub struct User {
 	pub email :          String,
 	pub mobile :         String,
 	pub crew :           String,
-	pub diet :           String,
+	pub diet :           Option<String>,
 	pub email_verified : bool,
 
 	// Used to verify if the supplied email is valid
@@ -52,7 +52,7 @@ impl User {
 			email :          "".to_string(),
 			mobile :         "".to_string(),
 			crew :           "".to_string(),
-			diet :           "".to_string(),
+			diet :           None,
 			email_verified : false,
 			code :           None,
 		}
@@ -72,7 +72,7 @@ impl User {
 	pub fn get_code(&self) -> Option<&str> { self.code.as_ref().map(|c| c.as_str()) }
 
 	pub async fn get_booking(&self, db : &CustomContext) -> Option<Booking> {
-		let booking = Booking::find(
+		let booking = Booking::find_one(
 			&db,
 			doc! {
 				"user_id" : &self.id,
@@ -118,7 +118,7 @@ impl User {
 	fn crew(&self) -> &str { &self.crew }
 
 	/// Diet
-	fn diet(&self) -> &str { &self.diet }
+	fn diet(&self) -> Option<&str> { self.diet.as_ref().map(|d| d.as_str()) }
 
 	/// Has this users email been verified?
 	fn email_verified(&self) -> bool { self.email_verified }

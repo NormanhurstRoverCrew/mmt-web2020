@@ -1,8 +1,10 @@
 use crate::{
-	db::helpers as DBHelper,
+	db::{Db},
 	graphql::{context::CustomContext, util::string_to_id},
-	models::{Booking, User, TICKET_PRICE},
+	models::{Booking, User, TICKET_PRICE, Vehicle},
 };
+use bson::oid::ObjectId;
+use bson::doc;
 use juniper::{graphql_value, FieldResult};
 
 pub struct QueryRoot;
@@ -11,14 +13,8 @@ pub struct QueryRoot;
 )]
 impl QueryRoot {
 	/// All bookings
-	async fn booking(context : &CustomContext, id : String) -> FieldResult<Booking> {
-		let bookings = context.bookings_handel();
-		let id = match string_to_id(&id) {
-			Ok(id) => id,
-			Err(e) => return Err(e),
-		};
-
-		let booking = match DBHelper::get(&bookings, &id).await {
+	async fn booking(context : &CustomContext, id : ObjectId) -> FieldResult<Booking> {
+		let booking = match Booking::get(&context, &id).await {
 			Some(booking) => booking,
 			None => {
 				return Err(juniper::FieldError::new(
@@ -34,15 +30,8 @@ impl QueryRoot {
 	}
 
 	/// Get a user
-	async fn booking_from_user(context : &CustomContext, id : String) -> FieldResult<Booking> {
-		let id = match string_to_id(&id) {
-			Ok(id) => id,
-			Err(e) => return Err(e),
-		};
-
-		let users = context.users_handel();
-
-		let user : User = match DBHelper::get(&users, &id).await {
+	async fn booking_from_user(context : &CustomContext, id : ObjectId) -> FieldResult<Booking> {
+		let user = match User::get(&context, &id).await {
 			Some(user) => user,
 			None => {
 				return Err(juniper::FieldError::new(
@@ -68,4 +57,13 @@ impl QueryRoot {
 	}
 
 	fn ticket_price() -> f64 { TICKET_PRICE }
+
+    /// If ticket is a driver, return the vehicle they own
+    async fn vehicle_from_ticket(context : &CustomContext, ticket_id: ObjectId) -> FieldResult<Option<Vehicle>> {
+        let vehicle = Vehicle::find_one(&context, doc! {
+            "driver_ticket": &ticket_id
+        }).await;
+
+        Ok(vehicle)
+    }
 }

@@ -52,8 +52,8 @@ export const Sidebar = ({classes, sideBarOpen, toggleSideBar}) => {
 					<Link icon={<FoodIcon />} to="/diets">
 						Diets
 					</Link>
-					<Link icon={<TicketIcon />} to="/teams">
-						Teams
+					<Link icon={<TicketIcon />} to="/vehicles">
+						Vehicles
 					</Link>
 					<Link icon={<TicketIcon />} to="/activities">
 						Activities

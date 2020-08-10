@@ -22,7 +22,7 @@ import plusicon from "img/plus.svg";
 const ADD_UPDATE_TICKETS = gql`
 	mutation AddUpdateTickets(
 		$update_tickets: [TicketUpdate!]!
-		$add_booking_id: String!
+		$add_booking_id: ObjectId!
 		$add_users: [BasicUser!]!
 	) {
 		updateTickets(tickets: $update_tickets) {

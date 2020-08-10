@@ -1,5 +1,5 @@
 use crate::{
-	db::Db,
+	db::{Create, Db},
 	graphql::context::CustomContext,
 	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };
@@ -45,12 +45,15 @@ impl Db<'_> for Booking {
 	const COLLECTION : &'static str = "bookings";
 }
 
+impl Create for Booking {
+	const COLLECTION : &'static str = "bookings";
+}
+
 impl Booking {
 	// Create a new booking with a booking user and 1 ticket containing the booking
 	// user.
-	pub async fn create(db : &CustomContext, user : &User) -> Option<ObjectId> {
-		let bookings = db.bookings_handel();
-		let seq = db.index("bookings");
+	pub async fn create(context : &CustomContext, user : &User) -> Option<ObjectId> {
+		let seq = context.index("bookings");
 
 		let booking = Booking {
 			user_id : user.id.clone(),
@@ -58,31 +61,13 @@ impl Booking {
 			..Self::default()
 		};
 
-		match bson::to_bson(&booking) {
-			Ok(bson::Bson::Document(doc)) => {
-				let booking_id = bookings
-					.insert_one(doc, None)
-					.await
-					.map(|b| b.inserted_id.as_object_id().unwrap().to_owned())
-					.ok();
-
-				if let Some(b) = &booking_id {
-					let ticket = Ticket::new(b, &user.id);
-					match bson::to_bson(&ticket) {
-						Ok(bson::Bson::Document(doc)) => {
-							db.tickets_handel().insert_one(doc, None).await.ok();
-						},
-						_ => {},
-					}
-				}
-
-				match booking_id {
-					Some(b) => Some(b),
-					None => None,
-				}
-			},
-			_ => None,
+		let booking_id = booking.create(&context).await.ok();
+		if let Some(b) = &booking_id {
+			let ticket = Ticket::new(b, &user.id);
+			ticket.create(&context).await.ok();
 		}
+
+		booking_id
 	}
 
 	pub async fn delete(&self, _db : &CustomContext) -> bool {

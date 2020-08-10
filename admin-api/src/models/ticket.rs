@@ -1,5 +1,5 @@
 use crate::{
-	db::Db,
+	db::{Create, Db, Update},
 	graphql::context::CustomContext,
 	models::{Booking, User, UserUpdate},
 };
@@ -16,12 +16,21 @@ pub struct TicketUpdate {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Ticket {
 	#[serde(rename = "_id")]
-	pub id :     ObjectId,
-	user_id :    ObjectId,
-	booking_id : ObjectId,
+	pub id :         ObjectId,
+	user_id :        ObjectId,
+	booking_id :     ObjectId,
+	pub vehicle_id : Option<ObjectId>,
 }
 
 impl Db<'_> for Ticket {
+	const COLLECTION : &'static str = "tickets";
+}
+
+impl Create for Ticket {
+	const COLLECTION : &'static str = "tickets";
+}
+
+impl Update for Ticket {
 	const COLLECTION : &'static str = "tickets";
 }
 
@@ -31,6 +40,7 @@ impl Ticket {
 			id :         ObjectId::new(),
 			user_id :    ObjectId::new(),
 			booking_id : ObjectId::new(),
+			vehicle_id : None,
 		}
 	}
 

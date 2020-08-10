@@ -1,5 +1,5 @@
 use crate::{
-	db::{helpers as DBHelper, FromDoc},
+	db::{Db, Create, Update},
 	graphql::context::CustomContext,
 	models::{utils::*, BasicUser, Booking, User},
 };
@@ -21,6 +21,15 @@ pub struct Ticket {
 	pub id :     ObjectId,
 	user_id :    ObjectId,
 	booking_id : ObjectId,
+	pub vehicle_id : Option<ObjectId>,
+}
+
+impl Db<'_> for Ticket {
+    const COLLECTION : &'static str = "tickets";
+}
+
+impl Update for Ticket {
+    const COLLECTION : &'static str = "tickets";
 }
 
 impl Ticket {
@@ -29,6 +38,7 @@ impl Ticket {
 			id :         ObjectId::new(),
 			user_id :    ObjectId::new(),
 			booking_id : ObjectId::new(),
+            vehicle_id:None,
 		}
 	}
 
@@ -50,9 +60,9 @@ impl Ticket {
 
 	pub fn get_user_id_opt(&self) -> Option<ObjectId> { Some(self.user_id.to_owned()) }
 
-	pub async fn get_user(&self, db : &CustomContext) -> Option<User> {
-		DBHelper::find::<User>(
-			&db.users_handel(),
+	pub async fn get_user(&self, context : &CustomContext) -> Option<User> {
+		User::find_one(
+			&context,
 			doc! {
 				"_id" : &self.user_id
 			},

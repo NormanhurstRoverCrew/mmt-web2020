@@ -1,7 +1,7 @@
 use crate::{
-	db::Db,
+	db::{Create, Db, Update},
 	graphql::{context::CustomContext, util::string_to_id},
-	models::{Booking, Ticket, TicketUpdate, Transaction, User, UserUpdate},
+	models::{Booking, NewVehicle, Ticket, TicketUpdate, Transaction, User, UserUpdate, Vehicle},
 	wire::TransactionInput,
 };
 use bson::{doc, oid::ObjectId, Bson, Document};
@@ -172,6 +172,107 @@ impl MutationRoot {
 			None => Err(FieldError::new(
 				"Booking not found",
 				graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+			)),
+		}
+	}
+
+	async fn new_vehicle(
+		context : &CustomContext,
+		mut vehicle : NewVehicle,
+	) -> FieldResult<Vehicle> {
+		vehicle.rego = vehicle.rego.to_ascii_uppercase();
+
+		// find out if this vehicle already exists?
+		if let None = Vehicle::find_one(
+			&context,
+			doc! {
+				"rego": &vehicle.rego,
+			},
+		)
+		.await
+		{
+			if let Some(mut ticket) = Ticket::get(&context, &vehicle.driver_ticket).await {
+				// Error if ticket already has vehicle
+				if let Some(_) = ticket.vehicle_id {
+					return Err(FieldError::new(
+						"Ticket already has a car associated with it",
+						graphql_value!({"type":"TICKET_HAS_VEHICLE"}),
+					));
+				}
+
+				let oid = vehicle.create(&context).await.map_err(|_| {
+					FieldError::new(
+						"Could not insert new Vehicle",
+						graphql_value!({"type":"DB_ERROR"}),
+					)
+				});
+
+				match oid {
+					Ok(oid) => {
+						// Set the owner of the vehicle as a member of this vehicle
+						ticket.vehicle_id = Some(oid.clone());
+						ticket.update(&context).await.unwrap();
+
+						Vehicle::get(&context, &oid).await.ok_or(FieldError::new(
+							"Could not find Vehicle",
+							graphql_value!({"type":"VEHICLE_NOT_FOUND"}),
+						))
+					},
+					Err(e) => return Err(e),
+				}
+			} else {
+				Err(FieldError::new(
+					"Ticket does not exist",
+					graphql_value!({"type":"TICKET_NOT_FOUND"}),
+				))
+			}
+		} else {
+			Err(FieldError::new(
+				"Vehicle already exists",
+				graphql_value!({"type":"DUPLICATE_VEHICLE"}),
+			))
+		}
+	}
+
+	async fn add_ticket_to_vehicle(
+		context : &CustomContext,
+		vehicle : ObjectId,
+		ticket : ObjectId,
+	) -> FieldResult<Vehicle> {
+		let vehicle = match Vehicle::get(&context, &vehicle).await {
+			Some(v) => v,
+			None => {
+				return Err(FieldError::new(
+					"Vehicle does not exist",
+					graphql_value!({"type":"VEHICLE_NOT_FOUND"}),
+				))
+			},
+		};
+
+		let mut ticket = match Ticket::get(&context, &ticket).await {
+			Some(t) => t,
+			None => {
+				return Err(FieldError::new(
+					"Ticket does not exist",
+					graphql_value!({"type":"TICKET_NOT_FOUND"}),
+				))
+			},
+		};
+
+		if let Some(_) = ticket.vehicle_id {
+			return Err(FieldError::new(
+				"Ticket already has a car associated with it",
+				graphql_value!({"type":"TICKET_HAS_VEHICLE"}),
+			));
+		};
+
+		ticket.vehicle_id = Some(vehicle.id.clone());
+
+		match ticket.update(&context).await {
+			Ok(_) => Ok(vehicle),
+			Err(_) => Err(FieldError::new(
+				"Could not update ticket",
+				graphql_value!({"type":"DB_ERROR"}),
 			)),
 		}
 	}

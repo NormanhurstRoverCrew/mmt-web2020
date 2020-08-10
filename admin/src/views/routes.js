@@ -3,7 +3,7 @@ import Bookings from "views/bookings/";
 import Tickets from "views/tickets/";
 import Payments from "views/payments/";
 import Diets from "views/diets/";
-import Teams from "views/teams/";
+import Vehicles from "views/vehicles/";
 import Activities from "./activity/Activities";
 
 export default [
@@ -12,8 +12,8 @@ export default [
 		view: Bookings,
 	},
 	{
-		path: "/teams",
-		view: Teams,
+		path: "/vehicles",
+		view: Vehicles,
 	},
 	{
 		path: "/tickets",

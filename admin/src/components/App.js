@@ -10,6 +10,7 @@ import Callback from './auth/Callback';
 import AuthenticationBroker from './auth/AuthenticationBroker';
 import AuthContextProvider from 'context/AuthContext';
 import BookingContextProvider from 'context/BookingContext';
+import VehicleContextProvider from 'context/VehicleContext';
 
 export const App = props => {
 	return (
@@ -26,7 +27,9 @@ export const App = props => {
 					render={props => (
 						<AuthenticationBroker {...props}>
 							<BookingContextProvider>
-								<Root {...props} />
+								<VehicleContextProvider>
+									<Root {...props} />
+								</VehicleContextProvider>
 							</BookingContextProvider>
 						</AuthenticationBroker>
 					)}

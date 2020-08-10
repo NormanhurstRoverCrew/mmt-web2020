@@ -1,34 +1,38 @@
-import React from "react";
+import React, {useContext} from "react";
 import {connect} from "react-redux";
 
 import MaterialTable from "material-table";
 import {Grid} from "@material-ui/core";
-import TeamTableDetails from "./TeamTableDetails";
+import VehicleTableDetails from "./VehicleTableDetails";
+import {VehicleContext} from "context/VehicleContext";
 
-export const TeamTable = ({teams}) => (
+export const VehicleTable = () => {
+		const {vehicles} = useContext(VehicleContext);
+
+		return (
 			<Grid item
 				xs={12}>
 				<MaterialTable
 					columns={[
 						{title: "ID", field: "id", type: "numeric"},
 						{
+							title: "Registration",
+							field: "registration",
+							render: rowData => <div>{rowData.rego || "[NO REGO]"}</div>,
+						},
+						{
 							title: "Name",
 							field: "name",
 							render: rowData => <div>{rowData.name || "[NO NAME]"}</div>,
 						},
-						{
-							title: "Registration",
-							field: "registration",
-							render: rowData => <div>{rowData.registration || "[NO REGO]"}</div>,
-						},
 					]}
-					data={teams}
-					title="Teams"
+					data={vehicles}
+					title="Vehicles"
 					detailPanel={[
 						{
 							tooltip: "Show Details",
 							render: (rowData) => {
-								return (<TeamTableDetails team={rowData}/>);
+								return (<VehicleTableDetails vehicle={rowData}/>);
 							},
 						},
 					]}
@@ -40,6 +44,7 @@ export const TeamTable = ({teams}) => (
 					}}
 				/>
 			</Grid>
-);
+		);
+};
 
-export default TeamTable;
+export default VehicleTable;

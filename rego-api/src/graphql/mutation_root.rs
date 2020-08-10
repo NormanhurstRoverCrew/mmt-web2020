@@ -1,15 +1,18 @@
+#![feature(vec_remove_item)]
+
 use crate::{
-	db::helpers as DBHelper,
+	db::{Db, Create, Update},
 	email::MyEmail,
 	graphql::{context::CustomContext, util::string_to_id},
-	models::{BasicUser, Booking, Ticket, TicketUpdate, Transaction, User},
+	models::{BasicUser, Booking, Ticket, TicketUpdate, Vehicle, User},
 };
 use bson::{doc, oid::ObjectId, Document};
 use futures::{stream::FuturesUnordered, StreamExt};
 use juniper::{graphql_value, FieldError, FieldResult};
-use mongodb::results::InsertOneResult;
 use std::iter::Iterator;
 use stripe::{PaymentIntent, PaymentIntentUpdateParams};
+use futures::future::join;
+use futures::future::try_join;
 
 pub struct MutationRoot;
 #[juniper::graphql_object(
@@ -17,26 +20,9 @@ pub struct MutationRoot;
 )]
 impl MutationRoot {
 	async fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
-		let users = context.users_handel();
-
-		let user : User = user.into();
-
-		let doc = bson::to_bson(&user)?;
-
-		let result = match doc {
-			bson::Bson::Document(document) => users.insert_one(document, None),
-			_ => {
-				return Err(juniper::FieldError::new(
-					"Failed to create bew User",
-					graphql_value!({"type": "DB_ERROR"}),
-				))
-			},
-		};
-
-		let user_id = match result.await {
-			Ok(InsertOneResult {
-				inserted_id,
-			}) => inserted_id.as_object_id().unwrap().to_owned(),
+        let user : User = user.into();
+		let user_id = match user.create(&context).await {
+			Ok(inserted_id) => inserted_id,
 			Err(_) => {
 				return Err(juniper::FieldError::new(
 					"User ID not created",
@@ -45,7 +31,7 @@ impl MutationRoot {
 			},
 		};
 
-		let user = match DBHelper::get::<User>(&users, &user_id).await {
+		let user = match User::get(&context, &user_id).await {
 			Some(user) => user,
 			_ => {
 				return Err(juniper::FieldError::new(
@@ -71,13 +57,12 @@ impl MutationRoot {
 	}
 
 	async fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {
-		let users = context.users_handel();
 		let id = match string_to_id(&id) {
 			Ok(id) => id,
 			Err(e) => return Err(e),
 		};
 
-		let mut user : User = match DBHelper::get(&users, &id).await {
+		let mut user = match User::get(&context, &id).await {
 			Some(user) => user,
 			None => {
 				return Err(juniper::FieldError::new(
@@ -116,7 +101,7 @@ impl MutationRoot {
 			))
 		})?;
 
-		let booking = DBHelper::get(&context.bookings_handel(), &bid).await;
+		let booking = Booking::get(&context, &bid).await;
 
 		if booking.is_none() || users.is_empty() {
 			return Ok(booking.unwrap());
@@ -169,7 +154,7 @@ impl MutationRoot {
 		tickets : Vec<TicketUpdate>,
 	) -> FieldResult<Vec<Ticket>> {
 		let get_ticket =
-			|id : ObjectId| async move { DBHelper::get(&context.tickets_handel(), &id).await };
+			|id : ObjectId| async move { Ticket::get(&context, &id).await };
 
 		let futures : FuturesUnordered<_> = tickets
 			.iter()
@@ -234,11 +219,11 @@ impl MutationRoot {
 
 	async fn attachStripePaymentMethodToBooking(
 		context : &CustomContext,
-		booking_id : String,
+		booking_id : ObjectId,
 		payment_method_id : String,
 	) -> FieldResult<String> {
-		let mut booking : Booking =
-			match DBHelper::get(&context.bookings_handel(), &string_to_id(&booking_id)?).await {
+		let mut booking =
+			match Booking::get(&context, &booking_id).await {
 				Some(b) => b,
 				None => {
 					return Err(FieldError::new(
@@ -268,4 +253,37 @@ impl MutationRoot {
 			)
 		})
 	}
+
+    async fn vehicle_accept_ticket(context: &CustomContext, vehicle: ObjectId, ticket: ObjectId) -> FieldResult<Vehicle> {
+        // Get Vehicle and Ticket at the same time from mongo...
+        // If there is an error then exit
+        let (mut vehicle, mut ticket)  =match join(Vehicle::get(&context, &vehicle), Ticket::get(&context, &ticket)).await {
+            (Some(v), Some(t)) => (v, t),
+            _ => return Err(FieldError::new(
+                    "Vehicle and/or Ticket does not exist",
+                    graphql_value!({"type":"DB_ERROR"}),
+            ))
+        };
+
+        if let None = vehicle.requested_tickets.iter().find(|t| t == &&ticket.id) {
+            return Err(FieldError::new(
+                    "Ticket has not requested to be added to this vehicle",
+                    graphql_value!({"type":"UNWARRENTED_TICKET_REQUEST"}),
+            ));
+        };
+
+        // Set the ticket vehicle officially
+        ticket.vehicle_id = Some(vehicle.id.clone());
+        // remove the request from the vehicle
+        vehicle.requested_tickets.retain(|t| t != &ticket.id);
+
+        // write out both operations simultaneously
+        try_join(ticket.update(&context), vehicle.update(&context)).await
+            .map(|_| vehicle)
+            .map_err(|_| FieldError::new(
+			    	"Booking not found",
+			    	graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+			    )
+            )
+    }
 }

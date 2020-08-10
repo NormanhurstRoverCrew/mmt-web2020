@@ -1,5 +1,5 @@
 use crate::{
-	db::helpers as DBHelper,
+	db::{Db, Create, Update},
 	graphql::context::CustomContext,
 	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };
@@ -39,6 +39,10 @@ impl Default for Booking {
 			payment : Payment::default(),
 		}
 	}
+}
+
+impl Db<'_> for Booking {
+    const COLLECTION : &'static str = "bookings";
 }
 
 impl Booking {
@@ -81,11 +85,9 @@ impl Booking {
 		}
 	}
 
-	pub async fn get_tickets(&self, db : &CustomContext) -> Vec<Ticket> {
-		let tickets = db.tickets_handel();
-
-		let tickets : Vec<Ticket> = DBHelper::search::<Ticket>(
-			&tickets,
+	pub async fn get_tickets(&self, context : &CustomContext) -> Vec<Ticket> {
+		let tickets : Vec<Ticket> = Ticket::search(
+			&context,
 			doc! {
 				"booking_id" : &self.id,
 			},
@@ -95,8 +97,8 @@ impl Booking {
 		tickets
 	}
 
-	pub async fn get_user(&self, db : &CustomContext) -> User {
-		DBHelper::get::<User>(&db.users_handel(), &self.user_id)
+	pub async fn get_user(&self, context : &CustomContext) -> User {
+		User::get(&context, &self.user_id)
 			.await
 			.unwrap()
 	}

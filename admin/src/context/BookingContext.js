@@ -2,6 +2,7 @@ import React, {useState, createContext, useEffect} from 'react';
 import _ from 'underscore';
 import {gql} from 'apollo-boost';
 import {useQuery, useMutation} from '@apollo/react-hooks';
+import { onError } from "apollo-link-error";
 
 export const BookingContext = createContext();
 

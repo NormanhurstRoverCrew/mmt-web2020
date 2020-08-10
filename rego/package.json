@@ -39,8 +39,8 @@
 		"image-webpack-loader": "^5.0.0",
 		"moment": "^2.24.0",
 		"moxios": "^0.4.0",
-		"node-sass": "^4.13.1",
-		"npm": "^6.14.4",
+		"node-sass": "^4.14.1",
+		"npm": "^6.14.7",
 		"prettier": "^2.0.2",
 		"prop-types": "^15.7.2",
 		"query-string": "^6.4.2",
@@ -58,14 +58,14 @@
 		"webpack-merge": "^4.2.1"
 	},
 	"devDependencies": {
-		"@babel/node": "^7.4.5",
-		"@babel/plugin-syntax-function-bind": "^7.8.3",
-		"@babel/preset-react": "^7.0.0",
-		"@babel/register": "^7.4.4",
 		"@babel/cli": "^7.4.4",
 		"@babel/core": "^7.4.5",
+		"@babel/node": "^7.4.5",
 		"@babel/plugin-proposal-class-properties": "^7.8.3",
+		"@babel/plugin-syntax-function-bind": "^7.8.3",
 		"@babel/preset-env": "^7.4.5",
+		"@babel/preset-react": "^7.0.0",
+		"@babel/register": "^7.4.4",
 		"babel-eslint": "^10.0.1",
 		"babel-loader": "^8.0.6",
 		"babel-plugin-istanbul": "^5.1.4",
@@ -85,7 +85,7 @@
 		"ignore-styles": "^5.0.1",
 		"jsdom": "^16.2.0",
 		"mock-browser": "^0.92.14",
-		"nodemon": "^1.19.1",
+		"nodemon": "^2.0.4",
 		"nyc": "^14.1.1",
 		"react-test-renderer": "^16.8.6",
 		"redux-devtools": "^3.4.2",
@@ -94,6 +94,6 @@
 		"terser-webpack-plugin": "^1.3.0",
 		"webpack": "^4.32.2",
 		"webpack-cli": "^3.3.2",
-		"webpack-dev-server": "^3.5.1"
+		"webpack-dev-server": "^3.11.0"
 	}
 }

@@ -1,5 +1,5 @@
 use crate::{
-	db::{helpers as DBHelper, FromDoc},
+	db::{Db, Create, Update},
 	graphql::{context::CustomContext, util::string_to_id},
 	models::{utils::*, Booking, Ticket},
 };
@@ -8,7 +8,7 @@ use juniper::{GraphQLInputObject, ID};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
-#[derive(GraphQLInputObject, Clone, Debug)]
+#[derive(GraphQLInputObject, Serialize, Clone, Debug)]
 pub struct BasicUser {
 	pub name :   String,
 	pub email :  String,
@@ -28,6 +28,14 @@ impl From<BasicUser> for User {
 	}
 }
 
+impl Db<'_> for User {
+    const COLLECTION : &'static str = "users";
+}
+
+impl Create for User {
+    const COLLECTION : &'static str = "users";
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
 	#[serde(rename = "_id")]
@@ -36,7 +44,7 @@ pub struct User {
 	pub email :          String,
 	pub mobile :         String,
 	pub crew :           String,
-	pub diet :           String,
+	pub diet :           Option<String>,
 	pub email_verified : bool,
 
 	// Used to verify if the supplied email is valid
@@ -51,7 +59,7 @@ impl User {
 			email :          "".to_string(),
 			mobile :         "".to_string(),
 			crew :           "".to_string(),
-			diet :           "".to_string(),
+			diet :           None,
 			email_verified : false,
 			code :           rand::thread_rng()
 				.sample_iter(&Alphanumeric)
@@ -89,10 +97,9 @@ impl User {
 		};
 	}
 
-	pub async fn get_booking(&self, db : &CustomContext) -> Option<Booking> {
-		let bookings = db.bookings_handel();
-		let booking = DBHelper::find::<Booking>(
-			&bookings,
+	pub async fn get_booking(&self, context : &CustomContext) -> Option<Booking> {
+		let booking = Booking::find_one(
+			&context,
 			doc! {
 				"user_id" : &self.id,
 			},
@@ -101,9 +108,9 @@ impl User {
 		match booking.await {
 			Some(b) => Some(b),
 			None => {
-				let booking_id = Booking::create(&db, self).await.expect("New Booking");
+				let booking_id = Booking::create(&context, self).await.expect("New Booking");
 
-				DBHelper::get::<Booking>(&bookings, &booking_id).await
+				Booking::get(&context, &booking_id).await
 			},
 		}
 	}

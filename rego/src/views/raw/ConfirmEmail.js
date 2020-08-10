@@ -15,7 +15,7 @@ import { useLocation, useHistory } from "react-router-dom";
 import { BookingContext } from "context/BookingContext";
 
 const GET_USER = gql`
-	query GetName($id: String!) {
+	query GetName($id: ObjectId!) {
 		bookingFromUser(id: $id) {
 			user {
 				name
