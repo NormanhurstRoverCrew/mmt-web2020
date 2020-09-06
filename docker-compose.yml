@@ -1,30 +1,42 @@
 version: '3.0'
 
 services:
+   reverse-proxy:
+      # The official v2 Traefik docker image
+      image: traefik:v2.2
+      # Enables the web UI and tells Traefik to listen to docker
+      ports:
+        # The HTTP port
+        - "80:80"
+        - "443:443"
+        # The Web UI (enabled by --api.insecure=true)
+        - "4040:8080"
+      volumes:
+        # So that Traefik can listen to the Docker events
+        - /var/run/docker.sock:/var/run/docker.sock
+        - $PWD/traefik.toml:/etc/traefik/traefik.toml
    rego:
       build: rego/.
       command: npm run dev
       restart: always
       ports:
          - 8080:8080
-      networks:
-         - mmt-dmz
-         - proxy
       volumes:
          - ./rego/src/:/usr/src/client
          - ./rego/tests/:/usr/src/tests
          - ./rego/coverage/:/usr/src/coverage
       environment:
          NODE_ENV: ${MMT19_ENV}
+      labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.rego.rule=Host(`mmt.normorovers.com`)"
+         - "traefik.http.routers.rego.entrypoints=websecure"
    admin:
       build: admin/.
       command: npm run dev
       restart: always
       ports:
          - 8081:8081
-      networks:
-         - mmt-dmz
-         - proxy
       volumes:
          - ./admin/src/:/usr/src/client
          - ./admin/tests/:/usr/src/tests
@@ -36,15 +48,16 @@ services:
       command: cargo watch -d0.1 -x run
       ports:
          - 8082:8000
-      networks:
-         - mmt-dmz
-         - proxy
       volumes:
          - ./rego-api/src:/e/src
          - ./rego-api/Cargo.toml:/e/Cargo.toml
          - ./rego-api/Cargo.lock:/e/Cargo.lock
          - ./rego-api/Rocket.toml:/e/Rocket.toml
          - ./rego-api/templates:/e/templates
+         - ./mmt/:/mmt
+         - ./mmt_db/:/mmt_db
+         - ./mmt-derive/:/mmt-derive
+         - ./proto/:/proto
          - regoapitarget:/e/target
          - regoapicargoregistry:/usr/local/cargo/registry
       environment:
@@ -56,21 +69,48 @@ services:
          EMAIL_RETURN: ${MMT20_EMAIL_RETURN}
          STRIPE_API_KEY: ${MMT20_STRIPE_API_KEY}
    admin-api:
-      build: rego-api/.
+      build: admin-api/.
       command: cargo watch -d0.1 -x run
       ports:
          - 8083:8000
-      networks:
-         - mmt-dmz
-         - proxy
       volumes:
          - ./admin-api/src:/e/src
          - ./admin-api/Cargo.toml:/e/Cargo.toml
          - ./admin-api/Cargo.lock:/e/Cargo.lock
          - ./admin-api/Rocket.toml:/e/Rocket.toml
          - ./admin-api/templates:/e/templates
+         - ./mmt/:/mmt
+         - ./mmt_db/:/mmt_db
+         - ./mmt-derive/:/mmt-derive
+         - ./proto/:/proto
          - adminapitarget:/e/target
          - adminapicargoregistry:/usr/local/cargo/registry
+      environment:
+         ENVIRONMENT: development 
+         MAILGUN_HELLO: ${MMT20_MAILGUN_HELLO}
+         MAILGUN_SERVER: ${MMT20_MAILGUN_SERVER}
+         MAILGUN_USER: ${MMT20_MAILGUN_USER}
+         MAILGUN_PASS: ${MMT20_MAILGUN_PASS}
+         EMAIL_RETURN: ${MMT20_EMAIL_RETURN}
+         SENTRY_ADDRESS: ${MMT20_SENTRY_ADMIN_API}
+         STRIPE_API_KEY: ${MMT20_STRIPE_API_KEY}
+   email:
+      build: email/.
+      command: cargo watch -d0.1 -x run
+      ports:
+         - 50051:50051
+      volumes:
+         - ./email/src:/e/src
+         - ./email/Cargo.toml:/e/Cargo.toml
+         - ./email/Cargo.lock:/e/Cargo.lock
+         - ./email/Rocket.toml:/e/Rocket.toml
+         - ./email/templates:/e/templates
+         - ./mmt/:/mmt
+         - ./mmt_db/:/mmt_db
+         - ./mmt-derive/:/mmt-derive
+         - ./proto/:/proto
+         - emailtarget:/e/target
+         - emailcargoregistry:/usr/local/cargo/registry
       environment:
          ENVIRONMENT: development 
          MAILGUN_HELLO: ${MMT20_MAILGUN_HELLO}
@@ -85,8 +125,6 @@ services:
       restart: always
       # ports:
       #    - "8080:80"
-      networks:
-         - proxy
       links:
          - rego
          - admin
@@ -95,20 +133,9 @@ services:
       restart: always
       ports:
          - "27017:27017"
-      networks:
-         - mmt-dmz
       volumes:
          - /Users/grant/mongodb_data:/data/db
 
-networks:
-   default:
-      driver: bridge
-   mmt-dmz:
-      external:
-         name: mmt-dmz
-   proxy:
-      external:
-         name: proxy
 volumes:
   regoapitarget:
       driver: local
@@ -117,4 +144,8 @@ volumes:
   adminapitarget:
       driver: local
   adminapicargoregistry:
+      driver: local
+  emailtarget:
+      driver: local
+  emailcargoregistry:
       driver: local

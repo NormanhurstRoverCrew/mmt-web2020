@@ -6,6 +6,8 @@ use crate::{
 	},
 	models::{Booking, Payment, Transaction},
 };
+use tonic::transport::Channel;
+use mmt::email::email_client::EmailClient;
 use actix_web::{web, Error, HttpResponse};
 use bson::doc;
 use juniper::{
@@ -28,12 +30,14 @@ pub async fn graphiql() -> HttpResponse {
 pub async fn graphql(
 	schema : web::Data<Arc<Schema>>,
 	stripe : web::Data<Client>,
+    rpc_email: web::Data<EmailClient<Channel>>,
 	db : web::Data<Database>,
 	data : web::Json<GraphQLRequest>,
 ) -> Result<HttpResponse, Error> {
 	let context = CustomContext {
 		db :     db.into_inner(),
 		stripe : stripe.into_inner(),
+        rpc_email: rpc_email.into_inner(),
 	};
 
 	let res = data.execute(&schema, &context).await;
@@ -45,12 +49,14 @@ pub async fn graphql(
 
 pub async fn stripe_hook(
 	stripe : web::Data<Client>,
+    rpc_email: web::Data<EmailClient<Channel>>,
 	db : web::Data<Database>,
 	event : web::Json<Event>,
 ) -> Result<HttpResponse, Error> {
 	let context = CustomContext {
 		db :     db.into_inner(),
 		stripe : stripe.into_inner(),
+        rpc_email: rpc_email.into_inner(),
 	};
 	match event.event_type {
 		EventType::PaymentIntentSucceeded => {

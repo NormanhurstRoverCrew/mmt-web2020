@@ -1,8 +1,8 @@
 use crate::{
-	db::{Create, Db},
 	graphql::context::CustomContext,
 	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };
+use mmt::{DB, Create, Db, Update};
 use bson::{doc, oid::ObjectId};
 use juniper::{FieldError, FieldResult, ID};
 use mongodb::results::UpdateResult;
@@ -13,6 +13,7 @@ use stripe::{
 	PaymentMethod, PaymentMethodId,
 };
 
+#[DB(bookings)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Booking {
 	#[serde(rename = "_id")]
@@ -41,14 +42,6 @@ impl Default for Booking {
 	}
 }
 
-impl Db<'_> for Booking {
-	const COLLECTION : &'static str = "bookings";
-}
-
-impl Create for Booking {
-	const COLLECTION : &'static str = "bookings";
-}
-
 impl Booking {
 	// Create a new booking with a booking user and 1 ticket containing the booking
 	// user.
@@ -61,10 +54,10 @@ impl Booking {
 			..Self::default()
 		};
 
-		let booking_id = booking.create(&context).await.ok();
+		let booking_id = booking.create(&context.db).await.ok();
 		if let Some(b) = &booking_id {
 			let ticket = Ticket::new(b, &user.id);
-			ticket.create(&context).await.ok();
+			ticket.create(&context.db).await.ok();
 		}
 
 		booking_id
@@ -74,9 +67,9 @@ impl Booking {
 		todo!("implement Booking.delete()");
 	}
 
-	pub async fn get_tickets(&self, db : &CustomContext) -> Vec<Ticket> {
+	pub async fn get_tickets(&self, context : &CustomContext) -> Vec<Ticket> {
 		let tickets : Vec<Ticket> = Ticket::search(
-			&db,
+			&context.db,
 			doc! {
 					"booking_id" : &self.id,
 			},
@@ -86,8 +79,8 @@ impl Booking {
 		tickets
 	}
 
-	pub async fn get_user(&self, db : &CustomContext) -> User {
-		User::get(&db, &self.user_id).await.unwrap()
+	pub async fn get_user(&self, context : &CustomContext) -> User {
+		User::get(&context.db, &self.user_id).await.unwrap()
 	}
 
 	async fn payment_description(&self, context : &CustomContext) -> String {

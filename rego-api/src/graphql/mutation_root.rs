@@ -1,5 +1,6 @@
 #![feature(vec_remove_item)]
 
+use std::sync::Arc;
 use crate::{
 	db::{Db, Create, Update},
 	email::MyEmail,
@@ -13,6 +14,7 @@ use std::iter::Iterator;
 use stripe::{PaymentIntent, PaymentIntentUpdateParams};
 use futures::future::join;
 use futures::future::try_join;
+use mmt::email::{User as EmailUser};
 
 pub struct MutationRoot;
 #[juniper::graphql_object(
@@ -43,17 +45,33 @@ impl MutationRoot {
 			},
 		};
 
-		MyEmail::from_user(&user)
-			.verify_email()
-			.map(|_| Some(user))
-			.map_err(|_| {
+        let euser = EmailUser {
+            id : user.id.to_hex(),
+        };
+
+        let mut rpc_email = (&*context.rpc_email).clone();
+
+        dbg!(rpc_email.verify(euser).await).map(|r| {dbg!(r.into_inner()); Some(user)})
+            .map_err(|_| 
 				juniper::FieldError::new(
-					"Failed to send email",
+					"User is not owner of booking",
 					graphql_value!({
-						"type": "EMAIL_FAIL"
+						"type": "USER_BOOKING_NOT_FOUND"
 					}),
 				)
-			})
+           )
+
+// 		MyEmail::from_user(&user)
+// 			.verify_email()
+// 			.map(|_| Some(user))
+// 			.map_err(|_| {
+// 				juniper::FieldError::new(
+// 					"Failed to send email",
+// 					graphql_value!({
+// 						"type": "EMAIL_FAIL"
+// 					}),
+// 				)
+// 			})
 	}
 
 	async fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {

@@ -1,8 +1,8 @@
 use crate::{
-	db::{Create, Db, Update},
 	graphql::context::CustomContext,
 	models::{Booking, User, UserUpdate},
 };
+use mmt::{DB, Create, Db, Update};
 use bson::{doc, oid::ObjectId, Document};
 use juniper::ID;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,7 @@ pub struct TicketUpdate {
 	pub user : UserUpdate,
 }
 
+#[DB(tickets)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Ticket {
 	#[serde(rename = "_id")]
@@ -20,18 +21,6 @@ pub struct Ticket {
 	user_id :        ObjectId,
 	booking_id :     ObjectId,
 	pub vehicle_id : Option<ObjectId>,
-}
-
-impl Db<'_> for Ticket {
-	const COLLECTION : &'static str = "tickets";
-}
-
-impl Create for Ticket {
-	const COLLECTION : &'static str = "tickets";
-}
-
-impl Update for Ticket {
-	const COLLECTION : &'static str = "tickets";
 }
 
 impl Ticket {
@@ -62,8 +51,8 @@ impl Ticket {
 
 	pub fn get_user_id_opt(&self) -> Option<ObjectId> { Some(self.user_id.to_owned()) }
 
-	pub async fn get_user(&self, db : &CustomContext) -> Option<User> {
-		User::get(&db, &self.user_id).await
+	pub async fn get_user(&self, context : &CustomContext) -> Option<User> {
+		User::get(&context.db, &self.user_id).await
 	}
 }
 

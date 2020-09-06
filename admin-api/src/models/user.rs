@@ -1,8 +1,8 @@
 use crate::{
-	db::Db,
 	graphql::context::CustomContext,
 	models::{Booking, Ticket},
 };
+use mmt::{DB, Create, Db, Update};
 use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,7 @@ pub struct UserUpdate {
 	pub email_verified : bool,
 }
 
+#[DB(users)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
 	#[serde(rename = "_id")]
@@ -38,10 +39,6 @@ pub struct User {
 
 	// Used to verify if the supplied email is valid
 	code : Option<String>,
-}
-
-impl Db<'_> for User {
-	const COLLECTION : &'static str = "users";
 }
 
 impl User {
@@ -71,9 +68,9 @@ impl User {
 
 	pub fn get_code(&self) -> Option<&str> { self.code.as_ref().map(|c| c.as_str()) }
 
-	pub async fn get_booking(&self, db : &CustomContext) -> Option<Booking> {
+	pub async fn get_booking(&self, context : &CustomContext) -> Option<Booking> {
 		let booking = Booking::find_one(
-			&db,
+			&context.db,
 			doc! {
 				"user_id" : &self.id,
 			},

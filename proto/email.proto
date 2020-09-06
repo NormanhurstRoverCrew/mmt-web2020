@@ -1,0 +1,14 @@
+syntax = "proto3";
+package email;
+
+service Email {
+	rpc verify (User) returns (EmailResponse);
+}
+
+message EmailResponse {
+	bool success = 1;
+}
+
+message User {
+	string id = 1;
+}

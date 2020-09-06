@@ -2,10 +2,12 @@ use bson::doc;
 use mongodb::{Collection, Database};
 use std::sync::Arc;
 use stripe::Client;
+use tonic::transport::Endpoint;
 
 pub struct CustomContext {
 	pub db :     Arc<Database>,
 	pub stripe : Arc<Client>,
+    pub email : Arc<Endpoint>,
 }
 
 impl CustomContext {

@@ -1,8 +1,8 @@
 use crate::{
-	db::{Create, Db},
 	graphql::context::CustomContext,
 	models::Ticket,
 };
+use mmt::{DB, Create, Db, Update};
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,11 @@ pub struct NewVehicle {
 	pub driver_ticket : ObjectId,
 }
 
+impl Create for NewVehicle {
+    const COLLECTION: &'static str = "vehicles";
+}
+
+#[DB(vehicles)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Vehicle {
 	#[serde(rename = "_id")]
@@ -22,14 +27,6 @@ pub struct Vehicle {
 
     #[serde(default)]
     pub requested_tickets: Vec<ObjectId>,
-}
-
-impl Db<'_> for Vehicle {
-	const COLLECTION : &'static str = "vehicles";
-}
-
-impl Create for NewVehicle {
-	const COLLECTION : &'static str = "vehicles";
 }
 
 impl Vehicle {
@@ -46,15 +43,15 @@ impl Vehicle {
 	}
 
 	async fn get_driver(&self, context : &CustomContext) -> Ticket {
-		Ticket::get(&context, &self.driver_ticket).await.unwrap()
+		Ticket::get(&context.db, &self.driver_ticket).await.unwrap()
 	}
 
     async fn get_request(&self, context: &CustomContext) -> Vec<Ticket> {
-        Ticket::find_ids(&context, &self.requested_tickets).await
+        Ticket::find_ids(&context.db, &self.requested_tickets).await
     }
 
     async fn get_tickets(&self, context: &CustomContext) -> Vec<Ticket> {
-        Ticket::find(&context, doc! {
+        Ticket::find(&context.db, doc! {
             "vehicle_id": &self.id
         }).await
     }

@@ -1,0 +1,15 @@
+{% extends "email.html" %}
+
+{% block head %}
+  <style>
+  </style>
+{% endblock %}
+
+{% block content %}
+	<p>
+		Hello {{ name }},
+	</p>
+	<p>
+		To continue your Booking / Registration, please <a href={{ verification_link }}>Click here!</a>
+	</p>
+{% endblock %}

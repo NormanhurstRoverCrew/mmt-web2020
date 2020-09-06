@@ -1,9 +1,9 @@
 use crate::{
-	db::{Create, Db, Update},
 	graphql::{context::CustomContext, util::string_to_id},
 	models::{Booking, NewVehicle, Ticket, TicketUpdate, Transaction, User, UserUpdate, Vehicle},
 	wire::TransactionInput,
 };
+	use mmt::{Create, Db, Update};
 use bson::{doc, oid::ObjectId, Bson, Document};
 use futures::{stream::FuturesUnordered, StreamExt};
 use juniper::{graphql_value, FieldError, FieldResult};
@@ -18,7 +18,7 @@ impl MutationRoot {
 		context : &CustomContext,
 		tickets : Vec<TicketUpdate>,
 	) -> FieldResult<Vec<Ticket>> {
-		let get_ticket = |id : ObjectId| async move { Ticket::get(&context, &id).await };
+		let get_ticket = |id : ObjectId| async move { Ticket::get(&context.db, &id).await };
 
 		let update_ticket = |user_id : Document, data : Document| async move {
 			let _ = context
@@ -77,7 +77,7 @@ impl MutationRoot {
 	}
 
 	async fn update_ticket(context : &CustomContext, ticket : TicketUpdate) -> FieldResult<Ticket> {
-		match Ticket::get(&context, &ticket.id).await {
+		match Ticket::get(&context.db, &ticket.id).await {
 			Some(t) => {
 				let user : Bson = bson::to_bson(&ticket.user).unwrap();
 
@@ -167,7 +167,7 @@ impl MutationRoot {
 	}
 
 	async fn delete_booking(context : &CustomContext, booking_id : String) -> FieldResult<bool> {
-		match Booking::get(&context, &string_to_id(&booking_id).expect("ObjectID")).await {
+		match Booking::get(&context.db, &string_to_id(&booking_id).expect("ObjectID")).await {
 			Some(b) => Ok(b.delete(&context).await),
 			None => Err(FieldError::new(
 				"Booking not found",
@@ -184,14 +184,14 @@ impl MutationRoot {
 
 		// find out if this vehicle already exists?
 		if let None = Vehicle::find_one(
-			&context,
+			&context.db,
 			doc! {
 				"rego": &vehicle.rego,
 			},
 		)
 		.await
 		{
-			if let Some(mut ticket) = Ticket::get(&context, &vehicle.driver_ticket).await {
+			if let Some(mut ticket) = Ticket::get(&context.db, &vehicle.driver_ticket).await {
 				// Error if ticket already has vehicle
 				if let Some(_) = ticket.vehicle_id {
 					return Err(FieldError::new(
@@ -200,7 +200,7 @@ impl MutationRoot {
 					));
 				}
 
-				let oid = vehicle.create(&context).await.map_err(|_| {
+				let oid = vehicle.create(&context.db).await.map_err(|_| {
 					FieldError::new(
 						"Could not insert new Vehicle",
 						graphql_value!({"type":"DB_ERROR"}),
@@ -211,9 +211,9 @@ impl MutationRoot {
 					Ok(oid) => {
 						// Set the owner of the vehicle as a member of this vehicle
 						ticket.vehicle_id = Some(oid.clone());
-						ticket.update(&context).await.unwrap();
+						ticket.update(&context.db).await.unwrap();
 
-						Vehicle::get(&context, &oid).await.ok_or(FieldError::new(
+						Vehicle::get(&context.db, &oid).await.ok_or(FieldError::new(
 							"Could not find Vehicle",
 							graphql_value!({"type":"VEHICLE_NOT_FOUND"}),
 						))
@@ -239,7 +239,7 @@ impl MutationRoot {
 		vehicle : ObjectId,
 		ticket : ObjectId,
 	) -> FieldResult<Vehicle> {
-		let vehicle = match Vehicle::get(&context, &vehicle).await {
+		let vehicle = match Vehicle::get(&context.db, &vehicle).await {
 			Some(v) => v,
 			None => {
 				return Err(FieldError::new(
@@ -249,7 +249,7 @@ impl MutationRoot {
 			},
 		};
 
-		let mut ticket = match Ticket::get(&context, &ticket).await {
+		let mut ticket = match Ticket::get(&context.db, &ticket).await {
 			Some(t) => t,
 			None => {
 				return Err(FieldError::new(
@@ -268,7 +268,7 @@ impl MutationRoot {
 
 		ticket.vehicle_id = Some(vehicle.id.clone());
 
-		match ticket.update(&context).await {
+		match ticket.update(&context.db).await {
 			Ok(_) => Ok(vehicle),
 			Err(_) => Err(FieldError::new(
 				"Could not update ticket",

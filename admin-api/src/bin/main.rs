@@ -3,6 +3,7 @@ use actix_web::{http::header, middleware, web, App, HttpServer};
 use juniper::EmptySubscription;
 use mongodb::Client as Mongo;
 use stripe::Client;
+use tonic::transport::Endpoint;
 
 use libmmtapi::{
 	graphql::{context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot},
@@ -19,6 +20,8 @@ async fn main() -> Result<(), std::io::Error> {
 
 	let stripe = std::env::var("STRIPE_API_KEY").expect("Stripe Api Key");
 	let stripe = Client::new(stripe);
+
+    let email_grpc = Endpoint::from_static("http://email:50051");
 
 	// Create Juniper schema
 	let schema = std::sync::Arc::new(Schema::new(
@@ -40,6 +43,7 @@ async fn main() -> Result<(), std::io::Error> {
 			.data(schema.clone())
 			.data(stripe.clone())
 			.data(db.clone())
+            .data(email_grpc.clone())
 			.wrap(middleware::Logger::default())
 			.wrap(cors)
 			.service(web::resource("/graphql").route(web::post().to(graphql)))

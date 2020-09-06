@@ -1,0 +1,21 @@
+[package]
+name = "mmt"
+version = "0.1.0"
+authors = ["Grant Perry <grant42perry@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mmt_derive = { path = "../mmt-derive" }
+mmt_db = { path = "../mmt_db" }
+mongodb = "1.0"
+bson = "1.0"
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+futures = "0.3"
+tonic = "0.3"
+prost = "0.6"
+
+[build-dependencies]
+tonic-build = { version = "0.3", default-features = false, features = ["transport", "prost"] }
