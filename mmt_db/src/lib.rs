@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use bson::{doc, oid::ObjectId, Document};
 use futures::StreamExt;
-use mongodb::results::{InsertOneResult, UpdateResult};
-use mongodb::{Client as Mongo, Database};
+use mongodb::results::UpdateResult;
+use mongodb::Database;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};

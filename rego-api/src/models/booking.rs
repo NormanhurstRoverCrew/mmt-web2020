@@ -1,5 +1,5 @@
 use crate::{
-	db::{Db, Create, Update},
+	db::Db,
 	graphql::context::CustomContext,
 	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };

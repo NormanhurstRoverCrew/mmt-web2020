@@ -4,12 +4,11 @@ use crate::{
 		context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot,
 		util::string_to_id,
 	},
-	models::{Booking, Payment, Transaction},
+	models::{Booking, Transaction},
 };
 use tonic::transport::Channel;
 use mmt::email::email_client::EmailClient;
 use actix_web::{web, Error, HttpResponse};
-use bson::doc;
 use juniper::{
 	http::{graphiql::graphiql_source, GraphQLRequest},
 	EmptySubscription, RootNode,

@@ -3,7 +3,7 @@ use bson::oid::ObjectId;
 use lettre_email::EmailBuilder;
 use mmt::Db;
 use mongodb::Database;
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 use crate::models::User as UserDb;
 use crate::transport::EmailTransport;
@@ -38,10 +38,7 @@ impl Email {
 impl mmt::email::email_server::Email for Email {
     async fn verify(&self, request: Request<User>) -> Result<Response<EmailResponse>, Status> {
         let user = request.get_ref();
-        if let Some(mut user) =
-            UserDb::get(&self.db, &ObjectId::with_string(&user.id).unwrap()).await
-        {
-            dbg!(&user);
+        if let Some(user) = UserDb::get(&self.db, &ObjectId::with_string(&user.id).unwrap()).await {
             let code = if let Some(code) = user.code() {
                 code.to_owned()
             } else {
@@ -50,11 +47,11 @@ impl mmt::email::email_server::Email for Email {
 
             let verify_email_template = EmailVerifyTemplate {
                 name: user.name(),
-                verification_link: &dbg!(format!(
+                verification_link: &format!(
                     "http://localhost:8080/confirm_email?uid={}&code={}",
                     &user.id().to_string(),
                     &code,
-                )),
+                ),
             };
 
             let email = Self::build(&user.email())

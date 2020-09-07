@@ -4,6 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
+#[allow(non_snake_case)]
 #[proc_macro_attribute]
 pub fn DB(attr: TokenStream, item: TokenStream) -> TokenStream {
     let collection = attr.to_string();

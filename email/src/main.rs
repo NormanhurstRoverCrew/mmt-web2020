@@ -1,8 +1,5 @@
-use bson::doc;
-use mongodb::{Client as Mongo, Database};
-use serde::Deserialize;
-use serde::Serialize;
-use tonic::{transport::Server, Request, Response, Status};
+use mongodb::Client as Mongo;
+use tonic::transport::Server;
 
 use mmt::email::email_server::EmailServer;
 

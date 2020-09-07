@@ -28,9 +28,6 @@ juniper= { git="https://github.com/graphql-rust/juniper.git", rev="84c9720b535c3
 # stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async"] }
 stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async", "default-tls", "events"], git = "https://github.com/grantperry/stripe-rs.git", branch = "payment-intent-update-payment-method" }
 rand = "0.7"
-lettre = "0.9"
-lettre_email = "0.9"
-askama = "0.8"
 reqwest = { version = "0.10", features = ["json", "blocking"] }
 serde = {version = "1.0", features = ["derive"] }
 serde_json = "1.0"

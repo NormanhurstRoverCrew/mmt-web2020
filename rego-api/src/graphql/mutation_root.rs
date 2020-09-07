@@ -1,9 +1,6 @@
-#![feature(vec_remove_item)]
-
 use std::sync::Arc;
 use crate::{
 	db::{Db, Create, Update},
-	email::MyEmail,
 	graphql::{context::CustomContext, util::string_to_id},
 	models::{BasicUser, Booking, Ticket, TicketUpdate, Vehicle, User},
 };
@@ -60,18 +57,6 @@ impl MutationRoot {
 					}),
 				)
            )
-
-// 		MyEmail::from_user(&user)
-// 			.verify_email()
-// 			.map(|_| Some(user))
-// 			.map_err(|_| {
-// 				juniper::FieldError::new(
-// 					"Failed to send email",
-// 					graphql_value!({
-// 						"type": "EMAIL_FAIL"
-// 					}),
-// 				)
-// 			})
 	}
 
 	async fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {

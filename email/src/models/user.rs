@@ -41,8 +41,11 @@ impl User {
             let ret = code.clone();
 
             user.code = Some(code);
-            user.update(&db).await;
-            ret
+            if user.update(&db).await.is_ok() {
+                ret
+            } else {
+                String::from("")
+            }
         } else {
             self.code.as_ref().unwrap().clone()
         }

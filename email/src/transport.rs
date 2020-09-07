@@ -1,14 +1,12 @@
 use lettre::{
     smtp::{
         authentication::{Credentials, Mechanism},
-        error::{Error, SmtpResult},
+        error::SmtpResult,
         extension::ClientId,
-        response::Response,
         ConnectionReuseParameters,
     },
     SendableEmail, SmtpClient, SmtpTransport, Transport,
 };
-use lettre_email::{Email, EmailBuilder};
 
 #[derive(Default, Debug)]
 pub struct EmailTransport {}

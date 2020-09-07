@@ -5,7 +5,6 @@ use actix_web::{http::header, middleware, web, App, HttpServer};
 use juniper::EmptySubscription;
 use mongodb::Client as Mongo;
 use stripe::Client;
-use tonic::transport::Channel;
 use tonic::transport::Endpoint;
 use mmt::email::email_client::EmailClient;
 
