@@ -62,7 +62,7 @@ impl ServerJwt {
 
 use chrono::Utc;
 
-use crate::wire::jwt::Error;
+// use crate::wire::jwt::Error;
 
 trait FromJwt {
 	fn from_jwt(jwt : &Claims) -> Result<Self, RoleError>

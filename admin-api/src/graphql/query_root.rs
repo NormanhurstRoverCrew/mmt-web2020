@@ -2,8 +2,8 @@ use crate::{
 	graphql::context::CustomContext,
 	models::{Booking, Vehicle},
 };
-use mmt::{Db};
 use juniper::FieldResult;
+use mmt::Db;
 
 pub struct QueryRoot;
 #[juniper::graphql_object(

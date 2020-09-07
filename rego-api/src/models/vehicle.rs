@@ -1,5 +1,5 @@
 use crate::{
-	db::{Create, Update, Db},
+	db::{Create, Db, Update},
 	graphql::context::CustomContext,
 	models::Ticket,
 };
@@ -24,8 +24,8 @@ pub struct Vehicle {
 	pub rego :          String,
 	pub driver_ticket : ObjectId,
 
-    #[serde(default)]
-    pub requested_tickets: Vec<ObjectId>,
+	#[serde(default)]
+	pub requested_tickets : Vec<ObjectId>,
 }
 
 impl Db<'_> for Vehicle {
@@ -43,7 +43,7 @@ impl Vehicle {
 				id : ObjectId::new(),
 				rego,
 				driver_ticket : driver.id.clone(),
-                requested_tickets: vec![],
+				requested_tickets : vec![],
 			}),
 			_ => None,
 		}
@@ -53,15 +53,19 @@ impl Vehicle {
 		Ticket::get(&context, &self.driver_ticket).await.unwrap()
 	}
 
-    async fn get_request(&self, context: &CustomContext) -> Vec<VehicleTicket> {
-        VehicleTicket::find_ids(&context, &self.requested_tickets).await
-    }
+	async fn get_request(&self, context : &CustomContext) -> Vec<VehicleTicket> {
+		VehicleTicket::find_ids(&context, &self.requested_tickets).await
+	}
 
-    async fn get_tickets(&self, context: &CustomContext) -> Vec<VehicleTicket> {
-        VehicleTicket::find(&context, doc! {
-            "vehicle_id": &self.id
-        }).await
-    }
+	async fn get_tickets(&self, context : &CustomContext) -> Vec<VehicleTicket> {
+		VehicleTicket::find(
+			&context,
+			doc! {
+				"vehicle_id": &self.id
+			},
+		)
+		.await
+	}
 }
 
 #[juniper::graphql_object(Context = CustomContext)]
@@ -70,20 +74,30 @@ impl Vehicle {
 
 	fn id(&self) -> ID { ID::from(self.id.to_hex()) }
 
-	async fn driver(&self, context : &CustomContext) -> Option<String> { self.get_driver(&context).await.get_user(&context).await.map(|user| user.name.to_owned()) }
+	async fn driver(&self, context : &CustomContext) -> Option<String> {
+		self.get_driver(&context)
+			.await
+			.get_user(&context)
+			.await
+			.map(|user| user.name.to_owned())
+	}
 
 	fn rego(&self) -> &str { &self.rego }
-    
-    async fn requests(&self, context : &CustomContext) -> Vec<VehicleTicket> { self.get_request(&context).await }
-    
-    async fn tickets(&self, context : &CustomContext) -> Vec<VehicleTicket> { self.get_tickets(&context).await }
+
+	async fn requests(&self, context : &CustomContext) -> Vec<VehicleTicket> {
+		self.get_request(&context).await
+	}
+
+	async fn tickets(&self, context : &CustomContext) -> Vec<VehicleTicket> {
+		self.get_tickets(&context).await
+	}
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct VehicleTicket {
 	#[serde(rename = "_id")]
-	pub id :            ObjectId,
-    user_id: ObjectId,
+	pub id :  ObjectId,
+	user_id : ObjectId,
 }
 
 impl Db<'_> for VehicleTicket {
@@ -91,9 +105,9 @@ impl Db<'_> for VehicleTicket {
 }
 
 impl VehicleTicket {
-    async fn get_user(&self, context: &CustomContext) -> Option<VehicleUser>{
-        VehicleUser::get(&context, &self.user_id).await
-    }
+	async fn get_user(&self, context : &CustomContext) -> Option<VehicleUser> {
+		VehicleUser::get(&context, &self.user_id).await
+	}
 }
 
 #[juniper::graphql_object(Context = CustomContext)]
@@ -102,17 +116,19 @@ impl VehicleTicket {
 
 	fn id(&self) -> ID { ID::from(self.id.to_hex()) }
 
-	async fn user(&self, context : &CustomContext) -> Option<VehicleUser> { self.get_user(context).await }
+	async fn user(&self, context : &CustomContext) -> Option<VehicleUser> {
+		self.get_user(context).await
+	}
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct VehicleUser {
-	pub name :           String,
-	pub crew :           String,
+	pub name : String,
+	pub crew : String,
 }
 
 impl Db<'_> for VehicleUser {
-    const COLLECTION : &'static str = "users";
+	const COLLECTION : &'static str = "users";
 }
 
 #[juniper::graphql_object(Context = CustomContext)]

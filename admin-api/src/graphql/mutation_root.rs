@@ -1,12 +1,12 @@
 use crate::{
 	graphql::{context::CustomContext, util::string_to_id},
-	models::{Booking, NewVehicle, Ticket, TicketUpdate, Transaction, User, UserUpdate, Vehicle},
+	models::{Booking, NewVehicle, Ticket, TicketUpdate, Transaction, Vehicle},
 	wire::TransactionInput,
 };
-	use mmt::{Create, Db, Update};
 use bson::{doc, oid::ObjectId, Bson, Document};
 use futures::{stream::FuturesUnordered, StreamExt};
 use juniper::{graphql_value, FieldError, FieldResult};
+use mmt::{Create, Db, Update};
 use std::iter::Iterator;
 
 pub struct MutationRoot;

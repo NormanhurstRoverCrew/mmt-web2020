@@ -1,4 +1,3 @@
-use crate::models::{Payment, Ticket, User};
 use bson::{oid::ObjectId, Document};
 
 pub fn doc_get_id(item : &Document) -> String { doc_get_id_key(item, "_id") }

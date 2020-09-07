@@ -42,7 +42,7 @@ impl Default for Booking {
 }
 
 impl Db<'_> for Booking {
-    const COLLECTION : &'static str = "bookings";
+	const COLLECTION : &'static str = "bookings";
 }
 
 impl Booking {
@@ -98,9 +98,7 @@ impl Booking {
 	}
 
 	pub async fn get_user(&self, context : &CustomContext) -> User {
-		User::get(&context, &self.user_id)
-			.await
-			.unwrap()
+		User::get(&context, &self.user_id).await.unwrap()
 	}
 
 	async fn payment_description(&self, context : &CustomContext) -> String {

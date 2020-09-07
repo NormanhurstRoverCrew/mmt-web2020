@@ -1,9 +1,9 @@
 use crate::{
-	db::{Db, Create, Update},
-	graphql::{context::CustomContext, util::string_to_id},
-	models::{utils::*, Booking, Ticket},
+	db::{Create, Db},
+	graphql::context::CustomContext,
+	models::{Booking, Ticket},
 };
-use bson::{doc, oid::ObjectId, Document};
+use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -29,11 +29,11 @@ impl From<BasicUser> for User {
 }
 
 impl Db<'_> for User {
-    const COLLECTION : &'static str = "users";
+	const COLLECTION : &'static str = "users";
 }
 
 impl Create for User {
-    const COLLECTION : &'static str = "users";
+	const COLLECTION : &'static str = "users";
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 mmt_derive = { path = "../mmt-derive" }
-mmt_db = { path = "../mmt_db" }
+mmt_db = { path = "../mmt-db" }
 mongodb = "1.0"
 bson = "1.0"
 async-trait = "0.1"

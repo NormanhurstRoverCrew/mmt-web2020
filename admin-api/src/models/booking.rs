@@ -2,9 +2,9 @@ use crate::{
 	graphql::context::CustomContext,
 	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };
-use mmt::{DB, Create, Db, Update};
 use bson::{doc, oid::ObjectId};
 use juniper::{FieldError, FieldResult, ID};
+use mmt::{Create, Db, DB};
 use mongodb::results::UpdateResult;
 use serde::{Deserialize, Serialize};
 use std::{error::Error, str::FromStr};
@@ -235,5 +235,5 @@ impl Booking {
 		self.get_tickets(context).await
 	}
 
-	async fn payment(&self, context : &CustomContext) -> Payment { self.payment.clone() }
+	async fn payment(&self) -> Payment { self.payment.clone() }
 }

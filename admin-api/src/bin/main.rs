@@ -21,7 +21,7 @@ async fn main() -> Result<(), std::io::Error> {
 	let stripe = std::env::var("STRIPE_API_KEY").expect("Stripe Api Key");
 	let stripe = Client::new(stripe);
 
-    let email_grpc = Endpoint::from_static("http://email:50051");
+	let email_grpc = Endpoint::from_static("http://email:50051");
 
 	// Create Juniper schema
 	let schema = std::sync::Arc::new(Schema::new(
@@ -43,7 +43,7 @@ async fn main() -> Result<(), std::io::Error> {
 			.data(schema.clone())
 			.data(stripe.clone())
 			.data(db.clone())
-            .data(email_grpc.clone())
+			.data(email_grpc.clone())
 			.wrap(middleware::Logger::default())
 			.wrap(cors)
 			.service(web::resource("/graphql").route(web::post().to(graphql)))

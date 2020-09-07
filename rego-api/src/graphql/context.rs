@@ -1,14 +1,14 @@
 use bson::doc;
+use mmt::email::email_client::EmailClient;
 use mongodb::{Collection, Database};
 use std::sync::Arc;
 use stripe::Client;
 use tonic::transport::Channel;
-use mmt::email::email_client::EmailClient;
 
 pub struct CustomContext {
-	pub db :     Arc<Database>,
-	pub stripe : Arc<Client>,
-    pub rpc_email : Arc<EmailClient<Channel>>
+	pub db :        Arc<Database>,
+	pub stripe :    Arc<Client>,
+	pub rpc_email : Arc<EmailClient<Channel>>,
 }
 
 impl CustomContext {

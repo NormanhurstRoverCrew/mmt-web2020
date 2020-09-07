@@ -55,7 +55,7 @@ services:
          - ./rego-api/Rocket.toml:/e/Rocket.toml
          - ./rego-api/templates:/e/templates
          - ./mmt/:/mmt
-         - ./mmt_db/:/mmt_db
+         - ./mmt-db/:/mmt-db
          - ./mmt-derive/:/mmt-derive
          - ./proto/:/proto
          - regoapitarget:/e/target
@@ -80,7 +80,7 @@ services:
          - ./admin-api/Rocket.toml:/e/Rocket.toml
          - ./admin-api/templates:/e/templates
          - ./mmt/:/mmt
-         - ./mmt_db/:/mmt_db
+         - ./mmt-db/:/mmt-db
          - ./mmt-derive/:/mmt-derive
          - ./proto/:/proto
          - adminapitarget:/e/target
@@ -106,7 +106,7 @@ services:
          - ./email/Rocket.toml:/e/Rocket.toml
          - ./email/templates:/e/templates
          - ./mmt/:/mmt
-         - ./mmt_db/:/mmt_db
+         - ./mmt-db/:/mmt-db
          - ./mmt-derive/:/mmt-derive
          - ./proto/:/proto
          - emailtarget:/e/target

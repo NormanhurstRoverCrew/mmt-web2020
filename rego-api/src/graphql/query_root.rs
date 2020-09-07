@@ -1,11 +1,9 @@
-use std::sync::Arc;
 use crate::{
-	db::{Db},
-	graphql::{context::CustomContext, util::string_to_id},
-	models::{Booking, User, TICKET_PRICE, Vehicle},
+	db::Db,
+	graphql::context::CustomContext,
+	models::{Booking, User, Vehicle, TICKET_PRICE},
 };
-use bson::oid::ObjectId;
-use bson::doc;
+use bson::{doc, oid::ObjectId};
 use juniper::{graphql_value, FieldResult};
 
 pub struct QueryRoot;
@@ -59,12 +57,19 @@ impl QueryRoot {
 
 	fn ticket_price() -> f64 { TICKET_PRICE }
 
-    /// If ticket is a driver, return the vehicle they own
-    async fn vehicle_from_ticket(context : &CustomContext, ticket_id: ObjectId) -> FieldResult<Option<Vehicle>> {
-        let vehicle = Vehicle::find_one(&context, doc! {
-            "driver_ticket": &ticket_id
-        }).await;
+	/// If ticket is a driver, return the vehicle they own
+	async fn vehicle_from_ticket(
+		context : &CustomContext,
+		ticket_id : ObjectId,
+	) -> FieldResult<Option<Vehicle>> {
+		let vehicle = Vehicle::find_one(
+			&context,
+			doc! {
+				"driver_ticket": &ticket_id
+			},
+		)
+		.await;
 
-        Ok(vehicle)
-    }
+		Ok(vehicle)
+	}
 }

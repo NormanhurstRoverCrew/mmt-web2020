@@ -1,10 +1,7 @@
-use crate::{
-	graphql::context::CustomContext,
-	models::Ticket,
-};
-use mmt::{DB, Create, Db, Update};
+use crate::{graphql::context::CustomContext, models::Ticket};
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
+use mmt::{Create, Db, DB};
 use serde::{Deserialize, Serialize};
 
 #[derive(GraphQLInputObject, Clone, Debug, Serialize)]
@@ -14,7 +11,7 @@ pub struct NewVehicle {
 }
 
 impl Create for NewVehicle {
-    const COLLECTION: &'static str = "vehicles";
+	const COLLECTION : &'static str = "vehicles";
 }
 
 #[DB(vehicles)]
@@ -25,8 +22,8 @@ pub struct Vehicle {
 	pub rego :          String,
 	pub driver_ticket : ObjectId,
 
-    #[serde(default)]
-    pub requested_tickets: Vec<ObjectId>,
+	#[serde(default)]
+	pub requested_tickets : Vec<ObjectId>,
 }
 
 impl Vehicle {
@@ -36,7 +33,7 @@ impl Vehicle {
 				id : ObjectId::new(),
 				rego,
 				driver_ticket : driver.id.clone(),
-                requested_tickets: vec![],
+				requested_tickets : vec![],
 			}),
 			_ => None,
 		}
@@ -46,15 +43,19 @@ impl Vehicle {
 		Ticket::get(&context.db, &self.driver_ticket).await.unwrap()
 	}
 
-    async fn get_request(&self, context: &CustomContext) -> Vec<Ticket> {
-        Ticket::find_ids(&context.db, &self.requested_tickets).await
-    }
+	async fn get_request(&self, context : &CustomContext) -> Vec<Ticket> {
+		Ticket::find_ids(&context.db, &self.requested_tickets).await
+	}
 
-    async fn get_tickets(&self, context: &CustomContext) -> Vec<Ticket> {
-        Ticket::find(&context.db, doc! {
-            "vehicle_id": &self.id
-        }).await
-    }
+	async fn get_tickets(&self, context : &CustomContext) -> Vec<Ticket> {
+		Ticket::find(
+			&context.db,
+			doc! {
+				"vehicle_id": &self.id
+			},
+		)
+		.await
+	}
 }
 
 #[juniper::graphql_object(Context = CustomContext)]
@@ -66,8 +67,12 @@ impl Vehicle {
 	async fn driver(&self, context : &CustomContext) -> Ticket { self.get_driver(&context).await }
 
 	fn rego(&self) -> &str { &self.rego }
-    
-    async fn requests(&self, context : &CustomContext) -> Vec<Ticket> { self.get_request(&context).await }
-    
-    async fn tickets(&self, context : &CustomContext) -> Vec<Ticket> { self.get_tickets(&context).await }
+
+	async fn requests(&self, context : &CustomContext) -> Vec<Ticket> {
+		self.get_request(&context).await
+	}
+
+	async fn tickets(&self, context : &CustomContext) -> Vec<Ticket> {
+		self.get_tickets(&context).await
+	}
 }

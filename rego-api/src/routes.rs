@@ -1,21 +1,21 @@
 use crate::{
-    db::Db,
+	db::Db,
 	graphql::{
 		context::CustomContext, mutation_root::MutationRoot, query_root::QueryRoot,
 		util::string_to_id,
 	},
 	models::{Booking, Transaction},
 };
-use tonic::transport::Channel;
-use mmt::email::email_client::EmailClient;
 use actix_web::{web, Error, HttpResponse};
 use juniper::{
 	http::{graphiql::graphiql_source, GraphQLRequest},
 	EmptySubscription, RootNode,
 };
+use mmt::email::email_client::EmailClient;
 use mongodb::Database;
 use std::sync::Arc;
 use stripe::{Client, Event, EventObject, EventType, PaymentIntent, PaymentIntentStatus};
+use tonic::transport::Channel;
 
 pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<CustomContext>>;
 
@@ -29,14 +29,14 @@ pub async fn graphiql() -> HttpResponse {
 pub async fn graphql(
 	schema : web::Data<Arc<Schema>>,
 	stripe : web::Data<Client>,
-    rpc_email: web::Data<EmailClient<Channel>>,
+	rpc_email : web::Data<EmailClient<Channel>>,
 	db : web::Data<Database>,
 	data : web::Json<GraphQLRequest>,
 ) -> Result<HttpResponse, Error> {
 	let context = CustomContext {
-		db :     db.into_inner(),
-		stripe : stripe.into_inner(),
-        rpc_email: rpc_email.into_inner(),
+		db :        db.into_inner(),
+		stripe :    stripe.into_inner(),
+		rpc_email : rpc_email.into_inner(),
 	};
 
 	let res = data.execute(&schema, &context).await;
@@ -48,14 +48,14 @@ pub async fn graphql(
 
 pub async fn stripe_hook(
 	stripe : web::Data<Client>,
-    rpc_email: web::Data<EmailClient<Channel>>,
+	rpc_email : web::Data<EmailClient<Channel>>,
 	db : web::Data<Database>,
 	event : web::Json<Event>,
 ) -> Result<HttpResponse, Error> {
 	let context = CustomContext {
-		db :     db.into_inner(),
-		stripe : stripe.into_inner(),
-        rpc_email: rpc_email.into_inner(),
+		db :        db.into_inner(),
+		stripe :    stripe.into_inner(),
+		rpc_email : rpc_email.into_inner(),
 	};
 	match event.event_type {
 		EventType::PaymentIntentSucceeded => {
@@ -111,13 +111,12 @@ async fn handle_pi_update(
 	//TODO add payment and send emails?
 
 	if let Ok((booking_id, pi)) = &booking_id {
-		let mut booking : Booking =
-			match Booking::get(&context, &booking_id).await {
-				Some(b) => b,
-				None => {
-					return Err(PaymentError::CouldNotCommit);
-				},
-			};
+		let mut booking : Booking = match Booking::get(&context, &booking_id).await {
+			Some(b) => b,
+			None => {
+				return Err(PaymentError::CouldNotCommit);
+			},
+		};
 
 		booking
 			.add_transaction(&context, Transaction::stripe(pi.id.as_str().to_string()))

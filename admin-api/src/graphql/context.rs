@@ -7,7 +7,7 @@ use tonic::transport::Endpoint;
 pub struct CustomContext {
 	pub db :     Arc<Database>,
 	pub stripe : Arc<Client>,
-    pub email : Arc<Endpoint>,
+	pub email :  Arc<Endpoint>,
 }
 
 impl CustomContext {

@@ -2,9 +2,9 @@ use crate::{
 	graphql::context::CustomContext,
 	models::{Booking, Ticket},
 };
-use mmt::{DB, Create, Db, Update};
 use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
+use mmt::{Db, DB};
 use serde::{Deserialize, Serialize};
 
 #[derive(GraphQLInputObject, Clone, Debug)]

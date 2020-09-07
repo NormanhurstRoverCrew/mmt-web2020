@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bson::{doc, oid::ObjectId, Document};
 use futures::StreamExt;
-use mongodb::results::{InsertOneResult, UpdateResult};
+use mongodb::results::UpdateResult;
 use std::error::Error;
 
 use crate::graphql::context::CustomContext;
@@ -41,22 +41,23 @@ pub trait Db<'a>: Send + Sized + Deserialize<'static> + 'static {
 			.find(Some(search), None)
 			.await
 			.expect("DB Error")
-            .filter_map(|doc| async move {doc.ok()})
-			.filter_map(|doc| async move {bson::from_bson(bson::Bson::Document(doc)).ok()})
-            .collect()
-            .await
+			.filter_map(|doc| async move { doc.ok() })
+			.filter_map(|doc| async move { bson::from_bson(bson::Bson::Document(doc)).ok() })
+			.collect()
+			.await
 	}
 
-	async fn find_ids(context : &'a CustomContext, ids: &Vec<ObjectId>) -> Vec<Self> {
-        Self::find(context,
-            doc! {
-                "_id": {
-                    "$in": ids,
-                }
-            },
-        )
-            .await
-    }
+	async fn find_ids(context : &'a CustomContext, ids : &Vec<ObjectId>) -> Vec<Self> {
+		Self::find(
+			context,
+			doc! {
+				"_id": {
+					"$in": ids,
+				}
+			},
+		)
+		.await
+	}
 
 	async fn get(context : &'a CustomContext, id : &ObjectId) -> Option<Self> {
 		Self::find_one(

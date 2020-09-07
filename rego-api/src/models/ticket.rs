@@ -1,9 +1,9 @@
 use crate::{
-	db::{Db, Create, Update},
+	db::{Db, Update},
 	graphql::context::CustomContext,
-	models::{utils::*, BasicUser, Booking, User},
+	models::{BasicUser, Booking, User},
 };
-use bson::{doc, oid::ObjectId, Document};
+use bson::{doc, oid::ObjectId};
 use juniper::ID;
 use serde::{Deserialize, Serialize};
 
@@ -18,18 +18,18 @@ pub struct TicketUpdate {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Ticket {
 	#[serde(rename = "_id")]
-	pub id :     ObjectId,
-	user_id :    ObjectId,
-	booking_id : ObjectId,
+	pub id :         ObjectId,
+	user_id :        ObjectId,
+	booking_id :     ObjectId,
 	pub vehicle_id : Option<ObjectId>,
 }
 
 impl Db<'_> for Ticket {
-    const COLLECTION : &'static str = "tickets";
+	const COLLECTION : &'static str = "tickets";
 }
 
 impl Update for Ticket {
-    const COLLECTION : &'static str = "tickets";
+	const COLLECTION : &'static str = "tickets";
 }
 
 impl Ticket {
@@ -38,7 +38,7 @@ impl Ticket {
 			id :         ObjectId::new(),
 			user_id :    ObjectId::new(),
 			booking_id : ObjectId::new(),
-            vehicle_id:None,
+			vehicle_id : None,
 		}
 	}
 

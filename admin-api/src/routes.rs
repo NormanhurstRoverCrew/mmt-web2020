@@ -5,9 +5,9 @@ use juniper::{
 	EmptySubscription, RootNode,
 };
 use mongodb::Database;
-use tonic::transport::Endpoint;
 use std::sync::Arc;
 use stripe::Client;
+use tonic::transport::Endpoint;
 
 pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<CustomContext>>;
 
@@ -28,7 +28,7 @@ pub async fn graphql(
 	let context = CustomContext {
 		db :     db.into_inner(),
 		stripe : stripe.into_inner(),
-        email : email.into_inner(),
+		email :  email.into_inner(),
 	};
 
 	let res = data.execute(&schema, &context).await;

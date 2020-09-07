@@ -119,9 +119,7 @@ impl From<TransactionInput> for Transaction {
 #[juniper::graphql_object(Context = CustomContext)]
 impl Payment {
 	/// Contact details
-	fn transactions(&self, context : &CustomContext) -> Vec<Transaction> {
-		self.transactions.clone()
-	}
+	fn transactions(&self) -> Vec<Transaction> { self.transactions.clone() }
 
 	fn ticket_price(&self) -> f64 { TICKET_PRICE }
 }

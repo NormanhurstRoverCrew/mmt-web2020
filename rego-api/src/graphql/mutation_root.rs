@@ -1,17 +1,18 @@
-use std::sync::Arc;
 use crate::{
-	db::{Db, Create, Update},
+	db::{Create, Db, Update},
 	graphql::{context::CustomContext, util::string_to_id},
-	models::{BasicUser, Booking, Ticket, TicketUpdate, Vehicle, User},
+	models::{BasicUser, Booking, Ticket, TicketUpdate, User, Vehicle},
 };
 use bson::{doc, oid::ObjectId, Document};
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::{
+	future::{join, try_join},
+	stream::FuturesUnordered,
+	StreamExt,
+};
 use juniper::{graphql_value, FieldError, FieldResult};
+use mmt::email::User as EmailUser;
 use std::iter::Iterator;
 use stripe::{PaymentIntent, PaymentIntentUpdateParams};
-use futures::future::join;
-use futures::future::try_join;
-use mmt::email::{User as EmailUser};
 
 pub struct MutationRoot;
 #[juniper::graphql_object(
@@ -19,7 +20,7 @@ pub struct MutationRoot;
 )]
 impl MutationRoot {
 	async fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
-        let user : User = user.into();
+		let user : User = user.into();
 		let user_id = match user.create(&context).await {
 			Ok(inserted_id) => inserted_id,
 			Err(_) => {
@@ -42,21 +43,25 @@ impl MutationRoot {
 			},
 		};
 
-        let euser = EmailUser {
-            id : user.id.to_hex(),
-        };
+		let euser = EmailUser {
+			id : user.id.to_hex(),
+		};
 
-        let mut rpc_email = (&*context.rpc_email).clone();
+		let mut rpc_email = (&*context.rpc_email).clone();
 
-        dbg!(rpc_email.verify(euser).await).map(|r| {dbg!(r.into_inner()); Some(user)})
-            .map_err(|_| 
+		dbg!(rpc_email.verify(euser).await)
+			.map(|r| {
+				dbg!(r.into_inner());
+				Some(user)
+			})
+			.map_err(|_| {
 				juniper::FieldError::new(
 					"User is not owner of booking",
 					graphql_value!({
 						"type": "USER_BOOKING_NOT_FOUND"
 					}),
 				)
-           )
+			})
 	}
 
 	async fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {
@@ -156,8 +161,7 @@ impl MutationRoot {
 		context : &CustomContext,
 		tickets : Vec<TicketUpdate>,
 	) -> FieldResult<Vec<Ticket>> {
-		let get_ticket =
-			|id : ObjectId| async move { Ticket::get(&context, &id).await };
+		let get_ticket = |id : ObjectId| async move { Ticket::get(&context, &id).await };
 
 		let futures : FuturesUnordered<_> = tickets
 			.iter()
@@ -225,16 +229,15 @@ impl MutationRoot {
 		booking_id : ObjectId,
 		payment_method_id : String,
 	) -> FieldResult<String> {
-		let mut booking =
-			match Booking::get(&context, &booking_id).await {
-				Some(b) => b,
-				None => {
-					return Err(FieldError::new(
-						"Booking not found",
-						graphql_value!({"type":"BOOKING_NOT_FOUND"}),
-					));
-				},
-			};
+		let mut booking = match Booking::get(&context, &booking_id).await {
+			Some(b) => b,
+			None => {
+				return Err(FieldError::new(
+					"Booking not found",
+					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+				));
+			},
+		};
 
 		let spi = match booking.get_stripe_pi(context).await {
 			Some(spi) => spi,
@@ -244,49 +247,73 @@ impl MutationRoot {
 				.expect("PaymentIntent not created"),
 		};
 
-        PaymentIntent::update(&context.stripe, spi.id.as_str(), PaymentIntentUpdateParams {
-            payment_method: Some(&payment_method_id),
-            ..PaymentIntentUpdateParams::default()
-        }).await;
-
-		spi.client_secret.ok_or_else(|| {
-			FieldError::new(
-				"Booking not found",
-				graphql_value!({"type":"BOOKING_NOT_FOUND"}),
-			)
-		})
+		if let Ok(_) = PaymentIntent::update(
+			&context.stripe,
+			spi.id.as_str(),
+			PaymentIntentUpdateParams {
+				payment_method : Some(&payment_method_id),
+				..PaymentIntentUpdateParams::default()
+			},
+		)
+		.await
+		{
+			spi.client_secret.ok_or_else(|| {
+				FieldError::new(
+					"Booking not found",
+					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+				)
+			})
+		} else {
+			Err(FieldError::new(
+				"Could not update PaymentIntent",
+				graphql_value!({"type":"STRIPE_ERROR"}),
+			))
+		}
 	}
 
-    async fn vehicle_accept_ticket(context: &CustomContext, vehicle: ObjectId, ticket: ObjectId) -> FieldResult<Vehicle> {
-        // Get Vehicle and Ticket at the same time from mongo...
-        // If there is an error then exit
-        let (mut vehicle, mut ticket)  =match join(Vehicle::get(&context, &vehicle), Ticket::get(&context, &ticket)).await {
-            (Some(v), Some(t)) => (v, t),
-            _ => return Err(FieldError::new(
-                    "Vehicle and/or Ticket does not exist",
-                    graphql_value!({"type":"DB_ERROR"}),
-            ))
-        };
+	async fn vehicle_accept_ticket(
+		context : &CustomContext,
+		vehicle : ObjectId,
+		ticket : ObjectId,
+	) -> FieldResult<Vehicle> {
+		// Get Vehicle and Ticket at the same time from mongo...
+		// If there is an error then exit
+		let (mut vehicle, mut ticket) = match join(
+			Vehicle::get(&context, &vehicle),
+			Ticket::get(&context, &ticket),
+		)
+		.await
+		{
+			(Some(v), Some(t)) => (v, t),
+			_ => {
+				return Err(FieldError::new(
+					"Vehicle and/or Ticket does not exist",
+					graphql_value!({"type":"DB_ERROR"}),
+				))
+			},
+		};
 
-        if let None = vehicle.requested_tickets.iter().find(|t| t == &&ticket.id) {
-            return Err(FieldError::new(
-                    "Ticket has not requested to be added to this vehicle",
-                    graphql_value!({"type":"UNWARRENTED_TICKET_REQUEST"}),
-            ));
-        };
+		if let None = vehicle.requested_tickets.iter().find(|t| t == &&ticket.id) {
+			return Err(FieldError::new(
+				"Ticket has not requested to be added to this vehicle",
+				graphql_value!({"type":"UNWARRENTED_TICKET_REQUEST"}),
+			));
+		};
 
-        // Set the ticket vehicle officially
-        ticket.vehicle_id = Some(vehicle.id.clone());
-        // remove the request from the vehicle
-        vehicle.requested_tickets.retain(|t| t != &ticket.id);
+		// Set the ticket vehicle officially
+		ticket.vehicle_id = Some(vehicle.id.clone());
+		// remove the request from the vehicle
+		vehicle.requested_tickets.retain(|t| t != &ticket.id);
 
-        // write out both operations simultaneously
-        try_join(ticket.update(&context), vehicle.update(&context)).await
-            .map(|_| vehicle)
-            .map_err(|_| FieldError::new(
-			    	"Booking not found",
-			    	graphql_value!({"type":"BOOKING_NOT_FOUND"}),
-			    )
-            )
-    }
+		// write out both operations simultaneously
+		try_join(ticket.update(&context), vehicle.update(&context))
+			.await
+			.map(|_| vehicle)
+			.map_err(|_| {
+				FieldError::new(
+					"Booking not found",
+					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+				)
+			})
+	}
 }

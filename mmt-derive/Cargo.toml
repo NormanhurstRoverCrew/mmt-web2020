@@ -10,6 +10,6 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-mmt_db = { path = "../mmt_db" }
+mmt_db = { path = "../mmt-db" }
 syn = "1.0"
 quote = "1.0"
