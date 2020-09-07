@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+	"rego-api",
+	"admin-api",
+	"email",
+	"mmt",
+	"mmt-db",
+	"mmt-derive",
+]

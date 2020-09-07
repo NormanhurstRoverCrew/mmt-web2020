@@ -13,7 +13,7 @@ path = "src/bin/main.rs"
 name = "mmtapi"
 
 [dependencies]
-mmt = { path = "../mmt" }
+mmt = { git = "https://github.com/NormanhurstRoverCrew/mmt-web2020.git" }
 # rocket = "0.4.2"
 # rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "async", default-features = false }
 # rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket", branch = "async", default-features = false, features = ["json", "mongodb_pool"] }
