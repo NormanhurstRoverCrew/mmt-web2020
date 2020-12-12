@@ -8,7 +8,7 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 
 #[async_trait]
-pub trait Db<'a>: Send + Sized + Deserialize<'static> + 'static {
+pub trait Db<'a>: Send + Sized + for<'de> Deserialize<'de> + 'static {
     const COLLECTION: &'static str;
 
     async fn all(db: &'a Database) -> Vec<Self> {
@@ -17,7 +17,7 @@ pub trait Db<'a>: Send + Sized + Deserialize<'static> + 'static {
             .await
             .unwrap()
             .filter_map(|item| async move { item.ok() })
-            .map(|doc| bson::from_bson(bson::Bson::Document(doc)).expect("Decode error"))
+            .map(|doc| bson::from_document(doc).expect("Decode error"))
             .collect()
             .await
     }
@@ -27,7 +27,7 @@ pub trait Db<'a>: Send + Sized + Deserialize<'static> + 'static {
             .find_one(Some(search), None)
             .await
             .expect("DB Error")
-            .map(|doc| bson::from_bson(bson::Bson::Document(doc)).expect("Decode error"))
+            .map(|doc| bson::from_document(doc).expect("Decode error"))
     }
 
     async fn find(db: &'a Database, search: Document) -> Vec<Self> {
@@ -36,7 +36,7 @@ pub trait Db<'a>: Send + Sized + Deserialize<'static> + 'static {
             .await
             .expect("DB Error")
             .filter_map(|doc| async move { doc.ok() })
-            .filter_map(|doc| async move { bson::from_bson(bson::Bson::Document(doc)).ok() })
+            .filter_map(|doc| async move { bson::from_document(doc).ok() })
             .collect()
             .await
     }
@@ -69,7 +69,7 @@ pub trait Db<'a>: Send + Sized + Deserialize<'static> + 'static {
             .await
             .unwrap()
             .filter_map(|item| async move { item.ok() })
-            .map(|doc| bson::from_bson(bson::Bson::Document(doc)).expect("Decode error"))
+            .map(|doc| bson::from_document(doc).expect("Decode error"))
             .collect()
             .await
     }
@@ -80,11 +80,7 @@ pub trait Create: Serialize {
     const COLLECTION: &'static str;
 
     async fn create(&self, db: &Database) -> Result<ObjectId, Box<dyn Error>> {
-        let doc = bson::to_bson(&self)
-            .unwrap()
-            .as_document()
-            .unwrap()
-            .to_owned();
+        let doc = bson::to_document(&self).unwrap().to_owned();
 
         db.collection(Self::COLLECTION)
             .insert_one(doc, None)
@@ -99,11 +95,7 @@ pub trait Update: Serialize {
     const COLLECTION: &'static str;
 
     async fn update(&self, db: &Database) -> Result<UpdateResult, Box<dyn Error>> {
-        let doc = bson::to_bson(&self)
-            .unwrap()
-            .as_document()
-            .unwrap()
-            .to_owned();
+        let doc = bson::to_document(&self).unwrap().to_owned();
 
         let id = doc.get("_id").map(|id| id.as_object_id()).flatten();
 
