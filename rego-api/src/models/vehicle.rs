@@ -1,8 +1,8 @@
 use crate::{
-	db::{Create, Db, Update},
 	graphql::context::CustomContext,
 	models::Ticket,
 };
+use mmt::{Create, Db,  Update};
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
 use serde::{Deserialize, Serialize};
@@ -50,16 +50,16 @@ impl Vehicle {
 	}
 
 	async fn get_driver(&self, context : &CustomContext) -> Ticket {
-		Ticket::get(&context, &self.driver_ticket).await.unwrap()
+		Ticket::get(&context.db, &self.driver_ticket).await.unwrap()
 	}
 
 	async fn get_request(&self, context : &CustomContext) -> Vec<VehicleTicket> {
-		VehicleTicket::find_ids(&context, &self.requested_tickets).await
+		VehicleTicket::find_ids(&context.db, &self.requested_tickets).await
 	}
 
 	async fn get_tickets(&self, context : &CustomContext) -> Vec<VehicleTicket> {
 		VehicleTicket::find(
-			&context,
+			&context.db,
 			doc! {
 				"vehicle_id": &self.id
 			},
@@ -106,7 +106,7 @@ impl Db<'_> for VehicleTicket {
 
 impl VehicleTicket {
 	async fn get_user(&self, context : &CustomContext) -> Option<VehicleUser> {
-		VehicleUser::get(&context, &self.user_id).await
+		VehicleUser::get(&context.db, &self.user_id).await
 	}
 }
 

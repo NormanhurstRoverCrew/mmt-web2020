@@ -1,8 +1,8 @@
 use crate::{
-	db::{Db, Update},
 	graphql::context::CustomContext,
 	models::{BasicUser, Booking, User},
 };
+use mmt::db::{Db, Update};
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
 use serde::{Deserialize, Serialize};
@@ -62,7 +62,7 @@ impl Ticket {
 
 	pub async fn get_user(&self, context : &CustomContext) -> Option<User> {
 		User::find_one(
-			&context,
+			&context.db,
 			doc! {
 				"_id" : &self.user_id
 			},

@@ -1,8 +1,8 @@
 use crate::{
-	db::Db,
 	graphql::context::CustomContext,
 	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };
+	use mmt::db::Db;
 use bson::{doc, oid::ObjectId};
 use juniper::{FieldError, FieldResult, ID};
 use mongodb::results::UpdateResult;
@@ -87,7 +87,7 @@ impl Booking {
 
 	pub async fn get_tickets(&self, context : &CustomContext) -> Vec<Ticket> {
 		let tickets : Vec<Ticket> = Ticket::search(
-			&context,
+			&context.db,
 			doc! {
 				"booking_id" : &self.id,
 			},
@@ -98,7 +98,7 @@ impl Booking {
 	}
 
 	pub async fn get_user(&self, context : &CustomContext) -> User {
-		User::get(&context, &self.user_id).await.unwrap()
+		User::get(&context.db, &self.user_id).await.unwrap()
 	}
 
 	async fn payment_description(&self, context : &CustomContext) -> String {

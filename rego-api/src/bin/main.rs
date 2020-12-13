@@ -1,5 +1,3 @@
-#![feature(decl_macro, proc_macro_hygiene)]
-
 use actix_cors::Cors;
 use actix_web::{http::header, middleware, web, App, HttpServer};
 use juniper::EmptySubscription;

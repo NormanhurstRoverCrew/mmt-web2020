@@ -1,8 +1,8 @@
 use crate::{
-	db::{Create, Db},
 	graphql::context::CustomContext,
 	models::{Booking, Ticket},
 };
+use mmt::db::{Create, Db};
 use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
 use rand::{distributions::Alphanumeric, Rng};
@@ -99,7 +99,7 @@ impl User {
 
 	pub async fn get_booking(&self, context : &CustomContext) -> Option<Booking> {
 		let booking = Booking::find_one(
-			&context,
+			&context.db,
 			doc! {
 				"user_id" : &self.id,
 			},
@@ -110,7 +110,7 @@ impl User {
 			None => {
 				let booking_id = Booking::create(&context, self).await.expect("New Booking");
 
-				Booking::get(&context, &booking_id).await
+				Booking::get(&context.db, &booking_id).await
 			},
 		}
 	}

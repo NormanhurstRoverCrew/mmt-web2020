@@ -1,8 +1,8 @@
 use crate::{
-	db::{Create, Db, Update},
 	graphql::{context::CustomContext, util::string_to_id},
 	models::{BasicUser, Booking, Ticket, TicketUpdate, User, Vehicle},
 };
+use mmt::db::{Create, Db, Update};
 use bson::{doc, oid::ObjectId, Document};
 use futures::{
 	future::{join, try_join},
@@ -21,7 +21,7 @@ pub struct MutationRoot;
 impl MutationRoot {
 	async fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
 		let user : User = user.into();
-		let user_id = match user.create(&context).await {
+		let user_id = match user.create(&context.db).await {
 			Ok(inserted_id) => inserted_id,
 			Err(_) => {
 				return Err(juniper::FieldError::new(
@@ -31,7 +31,7 @@ impl MutationRoot {
 			},
 		};
 
-		let user = match User::get(&context, &user_id).await {
+		let user = match User::get(&context.db, &user_id).await {
 			Some(user) => user,
 			_ => {
 				return Err(juniper::FieldError::new(
@@ -70,7 +70,7 @@ impl MutationRoot {
 			Err(e) => return Err(e),
 		};
 
-		let mut user = match User::get(&context, &id).await {
+		let mut user = match User::get(&context.db, &id).await {
 			Some(user) => user,
 			None => {
 				return Err(juniper::FieldError::new(
@@ -109,7 +109,7 @@ impl MutationRoot {
 			))
 		})?;
 
-		let booking = Booking::get(&context, &bid).await;
+		let booking = Booking::get(&context.db, &bid).await;
 
 		if booking.is_none() || users.is_empty() {
 			return Ok(booking.unwrap());
@@ -161,7 +161,7 @@ impl MutationRoot {
 		context : &CustomContext,
 		tickets : Vec<TicketUpdate>,
 	) -> FieldResult<Vec<Ticket>> {
-		let get_ticket = |id : ObjectId| async move { Ticket::get(&context, &id).await };
+		let get_ticket = |id : ObjectId| async move { Ticket::get(&context.db, &id).await };
 
 		let futures : FuturesUnordered<_> = tickets
 			.iter()
@@ -229,7 +229,7 @@ impl MutationRoot {
 		booking_id : ObjectId,
 		payment_method_id : String,
 	) -> FieldResult<String> {
-		let mut booking = match Booking::get(&context, &booking_id).await {
+		let mut booking = match Booking::get(&context.db, &booking_id).await {
 			Some(b) => b,
 			None => {
 				return Err(FieldError::new(
@@ -279,8 +279,8 @@ impl MutationRoot {
 		// Get Vehicle and Ticket at the same time from mongo...
 		// If there is an error then exit
 		let (mut vehicle, mut ticket) = match join(
-			Vehicle::get(&context, &vehicle),
-			Ticket::get(&context, &ticket),
+			Vehicle::get(&context.db, &vehicle),
+			Ticket::get(&context.db, &ticket),
 		)
 		.await
 		{
@@ -306,7 +306,7 @@ impl MutationRoot {
 		vehicle.requested_tickets.retain(|t| t != &ticket.id);
 
 		// write out both operations simultaneously
-		try_join(ticket.update(&context), vehicle.update(&context))
+		try_join(ticket.update(&context.db), vehicle.update(&context.db))
 			.await
 			.map(|_| vehicle)
 			.map_err(|_| {

@@ -415,7 +415,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_derive",
- "toml 0.4.10",
+ "toml",
 ]
 
 [[package]]
@@ -441,9 +441,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.31"
+version = "0.1.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26c4f3195085c36ea8d24d32b2f828d23296a9370a28aa39d111f6f16bef9f3b"
+checksum = "8d3a45e77e34375a7923b1e8febb049bb011f064714a8e17a1a616fef01da13d"
 dependencies = [
  "proc-macro2 1.0.10",
  "quote 1.0.3",
@@ -982,15 +982,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "find-crate"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e81c4ad4d20c0ce823cdf5f642cc3f58e6358096ba56e58ef20d41ae30929c38"
-dependencies = [
- "toml 0.5.6",
-]
-
-[[package]]
 name = "fixedbitset"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1089,7 +1080,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b939890c74b883c3cad11a50bcf10b63e655882f5af312e904bf6b83faa4501"
 dependencies = [
  "derive_utils",
- "find-crate",
  "quote 1.0.3",
  "syn 1.0.17",
 ]
@@ -1435,9 +1425,11 @@ dependencies = [
 
 [[package]]
 name = "juniper"
-version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper.git?rev=84c9720b535c37dfc1d8bc6b142bf2f63e5fd166#84c9720b535c37dfc1d8bc6b142bf2f63e5fd166"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19309aa4fd360d59b35edf306a3e1740e9784866bf6e222767fd7217b13d885c"
 dependencies = [
+ "async-trait",
  "bson",
  "chrono",
  "fnv",
@@ -1454,8 +1446,9 @@ dependencies = [
 
 [[package]]
 name = "juniper_codegen"
-version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper.git?rev=84c9720b535c37dfc1d8bc6b142bf2f63e5fd166#84c9720b535c37dfc1d8bc6b142bf2f63e5fd166"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a57106f1e3bb3f7156d240f062c3eee0c83dece5e7e2ff49c4da980a10def2bf"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.10",
@@ -1678,6 +1671,7 @@ dependencies = [
 [[package]]
 name = "mmt_db"
 version = "0.1.0"
+source = "git+https://github.com/NormanhurstRoverCrew/mmt-web2020.git#561bfb465a9745ee6ad243eb28328fca35955a78"
 dependencies = [
  "async-trait",
  "bson",
@@ -1689,6 +1683,7 @@ dependencies = [
 [[package]]
 name = "mmt_derive"
 version = "0.1.0"
+source = "git+https://github.com/NormanhurstRoverCrew/mmt-web2020.git#561bfb465a9745ee6ad243eb28328fca35955a78"
 dependencies = [
  "mmt_db",
  "quote 1.0.3",
@@ -2948,15 +2943,6 @@ name = "toml"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "758664fc71a3a69038656bee8b6be6477d2a6c315a6b81f7081f591bffa4111f"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "toml"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
 dependencies = [
  "serde",
 ]

@@ -1,8 +1,8 @@
 use crate::{
-	db::Db,
 	graphql::context::CustomContext,
 	models::{Booking, User, Vehicle, TICKET_PRICE},
 };
+use mmt::db::Db;
 use bson::{doc, oid::ObjectId};
 use juniper::{graphql_value, FieldResult};
 
@@ -13,7 +13,7 @@ pub struct QueryRoot;
 impl QueryRoot {
 	/// All bookings
 	async fn booking(context : &CustomContext, id : ObjectId) -> FieldResult<Booking> {
-		let booking = match Booking::get(&context, &id).await {
+		let booking = match Booking::get(&context.db, &id).await {
 			Some(booking) => booking,
 			None => {
 				return Err(juniper::FieldError::new(
@@ -30,7 +30,7 @@ impl QueryRoot {
 
 	/// Get a user
 	async fn booking_from_user(context : &CustomContext, id : ObjectId) -> FieldResult<Booking> {
-		let user = match User::get(&context, &id).await {
+		let user = match User::get(&context.db, &id).await {
 			Some(user) => user,
 			None => {
 				return Err(juniper::FieldError::new(
@@ -63,7 +63,7 @@ impl QueryRoot {
 		ticket_id : ObjectId,
 	) -> FieldResult<Option<Vehicle>> {
 		let vehicle = Vehicle::find_one(
-			&context,
+			&context.db,
 			doc! {
 				"driver_ticket": &ticket_id
 			},
