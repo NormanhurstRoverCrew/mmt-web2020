@@ -26,6 +26,10 @@ pub fn DB(attr: TokenStream, item: TokenStream) -> TokenStream {
         impl mmt::db::Create for #name {
             const COLLECTION: &'static str = #collection;
         }
+
+        impl mmt::db::Delete for #name {
+            const COLLECTION: &'static str = #collection;
+        }
     };
 
     tokens.into()

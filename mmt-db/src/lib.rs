@@ -114,3 +114,28 @@ pub trait Update: Serialize {
             .map_err(|e| e.into())
     }
 }
+
+#[async_trait]
+pub trait Delete: Serialize {
+    const COLLECTION: &'static str;
+
+    async fn update(&self, db: &Database) -> Result<UpdateResult, Box<dyn Error>> {
+        let doc = bson::to_document(&self).unwrap().to_owned();
+
+        let id = doc.get("_id").map(|id| id.as_object_id()).flatten();
+
+        let selector = match id {
+            Some(id) => {
+                doc! {
+                    "_id": id
+                }
+            }
+            None => return Err("Serialized Document does not contain \"_id\"".into()),
+        };
+
+        db.collection(Self::COLLECTION)
+            .delete_one(selector, None)
+            .await
+            .map_err(|e| e.into())
+    }
+}
