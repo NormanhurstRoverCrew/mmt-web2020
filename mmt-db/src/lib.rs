@@ -120,7 +120,7 @@ pub trait Update: Serialize {
 pub trait Delete: Serialize {
     const COLLECTION: &'static str;
 
-    async fn update(&self, db: &Database) -> Result<DeleteResult, Box<dyn Error>> {
+    async fn delete(&self, db: &Database) -> Result<DeleteResult, Box<dyn Error>> {
         let doc = bson::to_document(&self).unwrap().to_owned();
 
         let id = doc.get("_id").map(|id| id.as_object_id()).flatten();
