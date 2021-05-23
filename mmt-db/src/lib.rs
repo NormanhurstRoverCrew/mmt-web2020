@@ -109,8 +109,8 @@ pub trait Update: Serialize {
             None => return Err("Serialized Document does not contain \"_id\"".into()),
         };
 
-        db.collection(Self::COLLECTION)
-            .update_one(selector, doc, None)
+        let coll = db.collection::<Document>(Self::COLLECTION);
+        coll.update_one(selector, doc, None)
             .await
             .map_err(|e| e.into())
     }
@@ -134,7 +134,7 @@ pub trait Delete: Serialize {
             None => return Err("Serialized Document does not contain \"_id\"".into()),
         };
 
-        db.collection(Self::COLLECTION)
+        db.collection::<Document>(Self::COLLECTION)
             .delete_one(selector, None)
             .await
             .map_err(|e| e.into())
