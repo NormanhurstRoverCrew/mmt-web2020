@@ -1,10 +1,10 @@
 use crate::{
 	graphql::context::CustomContext,
-	models::{Booking, User, Vehicle, TICKET_PRICE},
+	models::{Booking, Ticket, User, Vehicle, TICKET_PRICE},
 };
-use mmt::db::Db;
 use bson::{doc, oid::ObjectId};
 use juniper::{graphql_value, FieldResult};
+use mmt::db::Db;
 
 pub struct QueryRoot;
 #[juniper::graphql_object(
@@ -71,5 +71,58 @@ impl QueryRoot {
 		.await;
 
 		Ok(vehicle)
+	}
+
+	/// If ticket is a driver, return the vehicle they own
+	async fn driver_name_from_rego(context : &CustomContext, rego : String) -> FieldResult<String> {
+		let vehicle = match Vehicle::find_one(
+			&context.db,
+			doc! {
+				"rego": &rego
+			},
+		)
+		.await
+		{
+			Some(v) => v,
+			None => {
+				return Err(juniper::FieldError::new(
+					"Vehicle does not exist",
+					graphql_value!({
+						"type": "VEHICLE_NOT_FOUND"
+					}),
+				));
+			},
+		};
+
+		let ticket = match Ticket::find_one(
+			&context.db,
+			doc! {
+				"_id": &vehicle.driver_ticket,
+			},
+		)
+		.await
+		{
+			Some(t) => t,
+			None => {
+				return Err(juniper::FieldError::new(
+					"Driver has gone missing!",
+					graphql_value!({
+						"type": "TICKET_NOT_FOUND"
+					}),
+				));
+			},
+		};
+
+		match ticket.user(&context).await {
+			Some(user) => Ok(user.name.clone()),
+			None => {
+				return Err(juniper::FieldError::new(
+					"Drivers name has gone missing",
+					graphql_value!({
+						"type": "USER_NOT_FOUND"
+					}),
+				));
+			},
+		}
 	}
 }

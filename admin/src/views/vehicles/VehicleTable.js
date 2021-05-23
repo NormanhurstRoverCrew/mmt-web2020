@@ -1,3 +1,4 @@
+import _ from "underscore";
 import React, {useContext} from "react";
 import {connect} from "react-redux";
 
@@ -5,9 +6,11 @@ import MaterialTable from "material-table";
 import {Grid} from "@material-ui/core";
 import VehicleTableDetails from "./VehicleTableDetails";
 import {VehicleContext} from "context/VehicleContext";
+import {BookingContext} from "context/BookingContext";
 
 export const VehicleTable = () => {
 		const {vehicles} = useContext(VehicleContext);
+		const {tickets} = useContext(BookingContext);
 
 		return (
 			<Grid item
@@ -23,7 +26,11 @@ export const VehicleTable = () => {
 						{
 							title: "Name",
 							field: "name",
-							render: rowData => <div>{rowData.name || "[NO NAME]"}</div>,
+							render: rowData => { 
+									const ticket = _.find(tickets, (t) => t.id == rowData.driver.id );
+									const driverName = (ticket && ticket.user && ticket.user.name) || "[NO NAME]";
+
+									return <div>{driverName}</div>},
 						},
 					]}
 					data={vehicles}

@@ -7,4 +7,6 @@ members = [
 	"mmt",
 	"mmt-db",
 	"mmt-derive",
+	"app-api",
+	"rego-new"
 ]

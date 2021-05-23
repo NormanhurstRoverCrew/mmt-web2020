@@ -1,0 +1,3 @@
+query GetDriver($rego: String!) {
+	driverNameFromRego(rego: $rego)
+}

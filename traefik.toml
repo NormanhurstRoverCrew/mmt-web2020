@@ -1,0 +1,21 @@
+[api]
+  insecure = true
+
+[providers.docker]
+  exposedByDefault = false
+  network = "default"
+  endpoint = "unix:///var/run/docker.sock"
+
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+
+#    [entryPoints.web.http]
+#    [entryPoints.web.http.redirections]
+#      [entryPoints.web.http.redirections.entryPoint]
+#        to = "websecure"
+#        scheme = "https"
+#	permanent = true
+
+  [entryPoints.websecure]
+    address = ":443"

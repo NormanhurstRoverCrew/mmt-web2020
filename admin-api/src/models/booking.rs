@@ -4,7 +4,7 @@ use crate::{
 };
 use bson::{doc, oid::ObjectId};
 use juniper::{FieldError, FieldResult, ID};
-use mmt::{Create, Db, DB};
+use mmt::{Create, Db, Update, DB};
 use mongodb::results::UpdateResult;
 use serde::{Deserialize, Serialize};
 use std::{error::Error, str::FromStr};

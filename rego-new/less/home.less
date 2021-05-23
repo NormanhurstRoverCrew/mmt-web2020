@@ -1,0 +1,112 @@
+#home {
+	height: 100vh;
+
+	#first {
+		height: 45vw;
+		position: relative;
+
+		padding-top: 3vw;
+		padding-left: 8vw;
+
+		.presents {
+			font-size: @title-size * 0.075;
+			font-style: italic;
+		}
+
+		.title {
+
+			.inline {
+				display: inline-block;
+			}
+			.block {
+				display: block;
+			}
+			// #m {}
+			#mt {
+				font-size: 0.6em;
+			}
+			#drag-race {
+				font-size: 0.2em;
+			}
+		}
+
+		.date {
+			font-size: @title-size * 0.1;
+		}
+
+		img#dancer {
+			position: absolute;
+			bottom: -2vw;
+			right: 0;
+			width: 33vw;
+		}
+
+		button {
+			position: absolute;
+			top: 1vw;
+			right: 1vw;
+		}
+
+		overflow: hidden;
+	}
+
+	#second {
+		#elements {
+			display:flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			align-items: stretch;
+
+			div {
+				margin: 1em;
+				padding: 1em;
+				padding-top: 0.4em;
+				padding-bottom: 2em;
+			}
+
+			.element-single {
+				flex-basis: 15em;
+			}
+
+			.bg-dark {
+				background-color: rgb(206 3 136 / 33%);
+				box-shadow: 0.3em 0.3em 1.5em rgba(206,3,136,42%);
+				border-radius: 0.3em;
+			}
+		}
+
+		// #inner {
+		// 	background-color: white;
+
+		// 	@media screen and (min-width: 40em){
+		// 		margin-left: 3em;
+		// 		margin-right: 3em;
+		// 	}
+		// 	@media screen and (min-width: 60em){
+		// 		max-width: 30em;
+		// 		margin-left: auto;
+		// 		margin-right: auto;
+		// 	}
+		// }
+	}
+
+	#third {
+		font-size: 1.5em;
+
+		.inner {
+			margin: 1em 2em;
+			padding: 0.5em;
+			display: flex;
+			justify-content: center;
+			align-items: baseline;
+			flex-wrap: wrap;
+			.text, .button {
+				margin: 0.5em;
+			}
+		}
+
+		.button {
+			overflow: none;
+		}
+	}
+}

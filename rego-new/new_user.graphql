@@ -1,0 +1,9 @@
+mutation NewUser($user: BasicUser!) {
+	newUser(user: $user) {
+		id
+		name
+		email
+		crew
+		mobile
+	}
+}

@@ -1,4 +1,4 @@
-FROM rust:1.47
+FROM rust:1.51
 
 RUN cargo install cargo-watch
 

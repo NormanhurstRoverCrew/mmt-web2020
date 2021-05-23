@@ -7,7 +7,7 @@ const createAuth0 = (window) => {
 
 	return new auth0.WebAuth({
 		domain: "normorovers.au.auth0.com",
-		clientID: "OQs8FmpqhKurwcf9XR076O0iYB5ihdWI",
+		clientID: "6YNLJbAncGQsnK9bNxhVDLahBujeAcg7",
 		redirectUri: arr[0] + "//" + arr[2] + "/callback",
 		audience: arr[0] + "//" + arr[2] + "/",
 		responseType: "token id_token",

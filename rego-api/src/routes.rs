@@ -5,16 +5,15 @@ use crate::{
 	},
 	models::{Booking, Transaction},
 };
-use mmt::db::Db;
 use actix_web::{web, Error, HttpResponse};
 use juniper::{
 	http::{graphiql::graphiql_source, GraphQLRequest},
 	EmptySubscription, RootNode,
 };
-use mmt::email::email_client::EmailClient;
+use mmt::{db::Db, email::email_client::EmailClient};
 use mongodb::Database;
 use std::sync::Arc;
-use stripe::{Client, Event, EventObject, EventType, PaymentIntent, PaymentIntentStatus};
+use stripe::{Client, WebhookEvent, EventObject, EventType, PaymentIntent, PaymentIntentStatus};
 use tonic::transport::Channel;
 
 pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<CustomContext>>;
@@ -50,7 +49,7 @@ pub async fn stripe_hook(
 	stripe : web::Data<Client>,
 	rpc_email : web::Data<EmailClient<Channel>>,
 	db : web::Data<Database>,
-	event : web::Json<Event>,
+	event : web::Json<WebhookEvent>,
 ) -> Result<HttpResponse, Error> {
 	let context = CustomContext {
 		db :        db.into_inner(),
@@ -88,7 +87,7 @@ async fn handle_pi_update(
 	obj : &EventObject,
 ) -> Result<(), PaymentError> {
 	let booking_id = if let EventObject::PaymentIntent(pi) = obj {
-		match PaymentIntent::retrieve(&stripe, pi.id.as_str()).await {
+		match PaymentIntent::retrieve(&stripe, &pi.id, &[]).await {
 			Ok(PaymentIntent {
 				amount_received: Some(ar),
 				status: PaymentIntentStatus::Succeeded,

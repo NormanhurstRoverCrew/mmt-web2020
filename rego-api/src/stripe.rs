@@ -1,5 +1,5 @@
 use serde::Serialize;
-use stripe::Currency;
+// use stripe::Currency;
 
 #[derive(Debug, Serialize)]
 struct CreateCheckoutSession<'a> {
@@ -7,6 +7,11 @@ struct CreateCheckoutSession<'a> {
 	cancel_url :           &'a str,
 	payment_method_types : Vec<&'a str>,
 	line_items :           Vec<LineItem<'a>>,
+}
+
+#[derive(Debug, Serialize)]
+enum Currency {
+	AUD,
 }
 
 #[derive(Debug, Serialize)]

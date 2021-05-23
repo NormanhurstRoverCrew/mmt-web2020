@@ -1,0 +1,15 @@
+#purchase-tickets {
+	display: grid;
+
+	grid-template-columns: auto;
+	@media screen and (min-width: 45em) {
+		grid-template-columns: auto 15em;
+	}
+
+	.ticket-header {
+		display: flex;
+		flex-wrap: wrap;
+
+		justify-content: space-between;
+	}
+}

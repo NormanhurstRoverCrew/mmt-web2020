@@ -2,9 +2,9 @@ use crate::{
 	graphql::context::CustomContext,
 	models::{BasicUser, Booking, User},
 };
-use mmt::db::{Db, Update};
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
+use mmt::{Db, Delete, DB};
 use serde::{Deserialize, Serialize};
 
 pub const TICKET_PRICE : f64 = 30.0;
@@ -15,6 +15,13 @@ pub struct TicketUpdate {
 	pub user : BasicUser,
 }
 
+#[derive(GraphQLInputObject, Clone, Debug)]
+pub struct BookingTicketUpdate {
+	pub id :   Option<ObjectId>,
+	pub user : BasicUser,
+}
+
+#[DB(tickets)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Ticket {
 	#[serde(rename = "_id")]
@@ -22,14 +29,6 @@ pub struct Ticket {
 	user_id :        ObjectId,
 	booking_id :     ObjectId,
 	pub vehicle_id : Option<ObjectId>,
-}
-
-impl Db<'_> for Ticket {
-	const COLLECTION : &'static str = "tickets";
-}
-
-impl Update for Ticket {
-	const COLLECTION : &'static str = "tickets";
 }
 
 impl Ticket {
@@ -60,7 +59,7 @@ impl Ticket {
 
 	pub fn get_user_id_opt(&self) -> Option<ObjectId> { Some(self.user_id.to_owned()) }
 
-	pub async fn get_user(&self, context : &CustomContext) -> Option<User> {
+	pub async fn user(&self, context : &CustomContext) -> Option<User> {
 		User::find_one(
 			&context.db,
 			doc! {
@@ -68,6 +67,13 @@ impl Ticket {
 			},
 		)
 		.await
+	}
+
+	pub async fn destroy(&self, context : &CustomContext) {
+		if let Some(user) = self.user(&context).await {
+			user.delete(&context.db).await;
+		}
+		self.delete(&context.db).await;
 	}
 }
 
@@ -79,5 +85,5 @@ impl Ticket {
 
 	fn booking(&self) -> Option<Booking> { self.get_booking() }
 
-	async fn user(&self, context : &CustomContext) -> Option<User> { self.get_user(context).await }
+	async fn user(&self, context : &CustomContext) -> User { self.user(context).await.unwrap() }
 }

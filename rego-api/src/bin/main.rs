@@ -22,10 +22,12 @@ async fn main() -> Result<(), std::io::Error> {
 	let stripe = std::env::var("STRIPE_API_KEY").expect("Stripe Api Key");
 	let stripe = Client::new(stripe);
 
-	let grpc_email = Endpoint::from_static("http://email:50051")
-		.connect()
-		.await
-		.unwrap();
+	let grpc_email = loop {
+		if let Ok(email) = Endpoint::from_static("http://email:50051").connect().await {
+			break email;
+		}
+		std::thread::sleep(std::time::Duration::from_secs(1));
+	};
 	let rpc_email = EmailClient::new(grpc_email.clone());
 
 	// Create Juniper schema
@@ -37,12 +39,14 @@ async fn main() -> Result<(), std::io::Error> {
 
 	// Start http server
 	HttpServer::new(move || {
-		let cors = Cors::new()
-			.allowed_origin("http://localhost:8082")
-			.allowed_origin("http://localhost:8080")
+		let cors = Cors::default()
+			// .allowed_origin("http://localhost:8082")
+			// .allowed_origin("http://localhost:8085")
+			// .allowed_origin("http://localhost:8000")
+			// .allowed_origin("http://localhost:8080")
+			.allow_any_origin()
 			.allowed_methods(vec!["GET", "POST", "OPTIONS"])
-			.allowed_headers(vec![header::CONTENT_TYPE])
-			.finish();
+			.allowed_headers(vec![header::CONTENT_TYPE]);
 
 		App::new()
 			.data(schema.clone())

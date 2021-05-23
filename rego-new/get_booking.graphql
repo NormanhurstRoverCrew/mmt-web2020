@@ -1,0 +1,17 @@
+query GetBooking($uid: ObjectId!) {
+	bookingFromUser(id: $uid) {
+		id
+		no
+		user { id }
+		tickets {
+			id
+			user {
+				id
+				name
+				email
+				mobile
+				crew
+			}
+		}
+	}
+}

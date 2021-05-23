@@ -7,7 +7,7 @@ use tonic::{Request, Response, Status};
 
 use crate::models::User as UserDb;
 use crate::transport::EmailTransport;
-use mmt::email::{EmailResponse, User};
+use mmt::email::{EmailResponse, User, Vehicle};
 
 #[derive(Debug)]
 pub struct Email {
@@ -48,7 +48,8 @@ impl mmt::email::email_server::Email for Email {
             let verify_email_template = EmailVerifyTemplate {
                 name: user.name(),
                 verification_link: &format!(
-                    "http://localhost:8080/confirm_email?uid={}&code={}",
+                    "{}/confirm_email?uid={}&code={}",
+                    std::env::var("REGO_URL").unwrap_or("http://localhost:8000".into()),
                     &user.id().to_string(),
                     &code,
                 ),
@@ -70,6 +71,16 @@ impl mmt::email::email_server::Email for Email {
         } else {
             Ok(Response::new(EmailResponse { success: false }))
         }
+    }
+
+    async fn notify_driver_new_passenger(
+        &self,
+        request: Request<Vehicle>,
+    ) -> Result<Response<EmailResponse>, Status> {
+        let vehicle = request.get_ref();
+        dbg!(&vehicle);
+
+        Ok(Response::new(EmailResponse { success: true }))
     }
 }
 

@@ -1,0 +1,20 @@
+mutation UpdateBookingTickets(
+	$booking_uid: ObjectId!,
+	$tickets: [BookingTicketUpdate!]!
+) {
+	updateBookingTickets(bookingId: $booking_uid, tickets: $tickets) {
+		id
+		no
+		user { id }
+		tickets {
+			id
+			user {
+				id
+				name
+				email
+				mobile
+				crew
+			}
+		}
+	}
+}

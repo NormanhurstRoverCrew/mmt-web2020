@@ -1,10 +1,7 @@
-use crate::{
-	graphql::context::CustomContext,
-	models::Ticket,
-};
-use mmt::{Create, Db,  Update};
+use crate::{graphql::context::CustomContext, models::Ticket};
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
+use mmt::{Create, Db, Update, DB};
 use serde::{Deserialize, Serialize};
 
 #[derive(GraphQLInputObject, Clone, Debug, Serialize)]
@@ -17,31 +14,26 @@ impl Create for NewVehicle {
 	const COLLECTION : &'static str = "vehicles";
 }
 
+#[DB(vehicles)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Vehicle {
 	#[serde(rename = "_id")]
 	pub id :            ObjectId,
 	pub rego :          String,
+	pub name :          String,
 	pub driver_ticket : ObjectId,
 
 	#[serde(default)]
 	pub requested_tickets : Vec<ObjectId>,
 }
 
-impl Db<'_> for Vehicle {
-	const COLLECTION : &'static str = "vehicles";
-}
-
-impl Update for Vehicle {
-	const COLLECTION : &'static str = "vehicles";
-}
-
 impl Vehicle {
-	pub fn new(rego : String, driver : &Ticket) -> Option<Self> {
+	pub fn new(rego : String, name : String, driver : &Ticket) -> Option<Self> {
 		match rego {
 			rego if rego.len() <= 6 => Some(Self {
 				id : ObjectId::new(),
 				rego,
+				name,
 				driver_ticket : driver.id.clone(),
 				requested_tickets : vec![],
 			}),
@@ -66,6 +58,8 @@ impl Vehicle {
 		)
 		.await
 	}
+
+	pub fn request_ticket(&mut self, ticket : &Ticket) { self.requested_tickets.push(ticket.id.clone()); }
 }
 
 #[juniper::graphql_object(Context = CustomContext)]
@@ -77,12 +71,14 @@ impl Vehicle {
 	async fn driver(&self, context : &CustomContext) -> Option<String> {
 		self.get_driver(&context)
 			.await
-			.get_user(&context)
+			.user(&context)
 			.await
 			.map(|user| user.name.to_owned())
 	}
 
 	fn rego(&self) -> &str { &self.rego }
+
+	fn name(&self) -> &str { &self.name }
 
 	async fn requests(&self, context : &CustomContext) -> Vec<VehicleTicket> {
 		self.get_request(&context).await

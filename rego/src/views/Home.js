@@ -35,6 +35,15 @@ const TitleBlock = ({classes, className}) => (
 			}}>
 				Register Now
 		</Link>
+		<Link to="/checkin"
+			color="primary"
+			size="large"
+			classes={{
+				root: classes.buttonRoot,
+				textPrimary: classes.buttonTextPrimary,
+			}}>
+				Check In
+		</Link>
 	</div>
 );
 

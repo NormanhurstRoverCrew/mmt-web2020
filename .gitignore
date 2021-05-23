@@ -146,3 +146,4 @@ bower.json
 !/storage/.keep
 
 # End of https://www.gitignore.io/api/node,rails
+**/*.DS_Store

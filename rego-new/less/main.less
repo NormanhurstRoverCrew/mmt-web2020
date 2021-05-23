@@ -1,0 +1,148 @@
+html {
+	background: rgb(241,158,250);
+}
+
+body {
+	font-family: "Roboto", "Helvetica Neue", Helvetica, Arial;
+	font-weight: 400;
+	font-size: 1.5em;
+	background: linear-gradient(145deg, rgba(241,158,250,1) 0%, rgba(206,0,133,1) 100%);
+	color: white;
+	text-shadow: 0.3em 0.3em 1.5em rgba(204,0,133,0.9);
+}
+
+h2 {
+	font-size: 1.3em;
+	font-weight: 500;
+}
+
+.pink-bg {
+	background: linear-gradient(145deg, rgba(241,158,250,1) 0%, rgba(206,0,133,1) 100%);
+}
+
+#main {
+	height: 100vh;
+	overflow-y: scroll;
+
+	// Hide Scroll
+	-ms-overflow-style: none;  /* IE and Edge */
+	scrollbar-width: none;  /* Firefox */
+}
+
+// Hide scroll
+#main::-webkit-scrollbar {
+	display: none;
+}
+
+.full-height {
+	height: 100vw;
+}
+
+// Cancel out normal button styling
+button, input[type="submit"], input[type="reset"] {
+	background: none;
+	color: inherit;
+	border: none;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	outline: inherit;
+}
+
+button {
+	font-size: 0.5em;
+	display: inline-block;
+	padding: 0.35em 1.2em;
+	border: 0.1em solid #FFFFFF;
+	margin: 0 0.3em 0.3em 0;
+	border-radius: 0.12em;
+	box-sizing: border-box;
+	text-decoration: none;
+	font-weight:400;
+	color:#FFFFFF;
+	text-align:center;
+	transition: all 0.2s;
+
+	@media screen and (min-width: 40em) {
+		font-size: 1em;
+	}
+}
+
+@title-size: 33vw;
+
+.title {
+	font-family: 'Racing Sans One', cursive;
+	text-transform: uppercase;
+	font-size: @title-size;
+	line-height: 0.75;
+}
+
+.floating-white {
+	background-color: white;
+	color: black;
+	padding: 0.6em;
+}
+
+#new-booking-form {
+	.title {
+		font-size: 2em;
+	}
+}
+
+.mui-textfield {
+	padding-bottom: 1em;
+	label {
+		// font-family: 'Racing Sans One', cursive;
+		// text-transform: uppercase;
+		color: white;
+		// font-size: 0.8em;
+	}
+	input {
+		border-bottom: 2px solid rgb(98 0 255 / 68%);
+		font-size: 1.2em;
+		color: white;
+	}
+}
+
+.mui--text-title {
+	font-size: 1.5em;
+	line-height: unset;
+}
+
+.mui--text-caption {
+	font-size: 0.7em;
+	line-height: 0.7em;
+}
+
+.mui-textfield .mui--text-caption {
+	line-height: unset;
+}
+
+.mui-textfield--float-label>input:not(:focus).mui--is-not-empty~label {
+	color: white;
+}
+
+.mui--text-body1 {
+	font-size: 1em;
+	line-height: unset;
+}
+
+.mui-textfield, .mui--text-body1 {
+	padding-bottom: 0.8em;
+}
+
+.errors {
+	p {
+		color: purple;
+		font-size: 0.9em;
+	}
+
+	.msg {
+		font-size: 0.7em;
+	}
+}
+
+@import "home";
+@import "purchase";
+@import "booking_summary";
+@import "checkout";

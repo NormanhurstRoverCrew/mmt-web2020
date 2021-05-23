@@ -37,19 +37,32 @@ class TopBar extends Component {
 						className={classNames(classes.topBarItemLight)}>CONTACT</Button>
 				</Grid>
 				<Hidden xsDown>
-				<Grid item
-					className={classNames(classes.topBarItem)}
-					component="li">
-					<Link to="/register"
-						color="primary"
-						size="large"
-						classes={{
-							root: classes.buttonRoot,
-							textPrimary: classes.buttonTextPrimary,
-						}}>
-						Register
-					</Link>
-				</Grid>
+					<Grid item
+						className={classNames(classes.topBarItem)}
+						component="li">
+						<Link to="/register"
+							color="primary"
+							size="large"
+							classes={{
+								root: classes.buttonRoot,
+								textPrimary: classes.buttonTextPrimary,
+							}}>
+							Register
+						</Link>
+					</Grid>
+					<Grid item
+						className={classNames(classes.topBarItem)}
+						component="li">
+						<Link to="/checkin"
+							color="primary"
+							size="large"
+							classes={{
+								root: classes.buttonRoot,
+								textPrimary: classes.buttonTextPrimary,
+							}}>
+								Check In
+						</Link>
+					</Grid>
 				</Hidden>
 			</Grid>
 		);

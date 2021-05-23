@@ -29,7 +29,7 @@ services:
          NODE_ENV: ${MMT19_ENV}
       labels:
          - "traefik.enable=true"
-         - "traefik.http.routers.rego.rule=Host(`mmt.normorovers.com`)"
+         - "traefik.http.routers.rego.rule=host(`mmt.normorovers.com`)"
          - "traefik.http.routers.rego.entrypoints=websecure"
    admin:
       build: admin/.
@@ -43,6 +43,10 @@ services:
          - ./admin/coverage/:/usr/src/coverage
       environment:
          NODE_ENV: ${MMT19_ENV}
+      labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.rego.rule=host(`admin.mmt.normorovers.com`)"
+         - "traefik.http.routers.rego.entrypoints=websecure"
    rego-api:
       build: rego-api/.
       command: cargo watch -d0.1 -x run
@@ -120,6 +124,7 @@ services:
          EMAIL_RETURN: ${MMT20_EMAIL_RETURN}
          SENTRY_ADDRESS: ${MMT20_SENTRY_ADMIN_API}
          STRIPE_API_KEY: ${MMT20_STRIPE_API_KEY}
+         REGO_URL: ${MMT21_REGO_URL}
    nginx:
       build: ./nginx
       restart: always

@@ -1,0 +1,5 @@
+mutation DriverAddVehicle($ticket_id: ObjectId!, $rego: String!, $name: String!) {
+	driverAddVehicle(driverTicket: $ticket_id, rego: $rego, name: $name) {
+		id driver rego name
+	}
+}

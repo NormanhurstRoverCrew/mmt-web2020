@@ -2,9 +2,9 @@ use crate::{
 	graphql::context::CustomContext,
 	models::{Booking, Ticket},
 };
-use mmt::db::{Create, Db};
 use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
+use mmt::{Db, Update, DB};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
@@ -28,14 +28,7 @@ impl From<BasicUser> for User {
 	}
 }
 
-impl Db<'_> for User {
-	const COLLECTION : &'static str = "users";
-}
-
-impl Create for User {
-	const COLLECTION : &'static str = "users";
-}
-
+#[DB(users)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
 	#[serde(rename = "_id")]
@@ -81,20 +74,7 @@ impl User {
 	pub async fn set_email_verified(&mut self, context : &CustomContext, verified : bool) {
 		self.email_verified = verified;
 
-		if let Ok(bson::Bson::Document(doc)) = bson::to_bson(&self) {
-			let _ = context
-				.users_handel()
-				.update_one(
-					doc! {
-						"_id" : &self.id,
-					},
-					doc! {
-						"$set" : doc,
-					},
-					None,
-				)
-				.await;
-		};
+		if let Ok(_) = self.update(&context.db).await {};
 	}
 
 	pub async fn get_booking(&self, context : &CustomContext) -> Option<Booking> {

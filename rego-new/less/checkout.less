@@ -1,0 +1,17 @@
+#checkout {
+	display: grid;
+
+	grid-template-columns: auto;
+	@media screen and (min-width: 45em) {
+		grid-template-columns: auto 15em;
+	}
+
+	.payment-type-field {
+		display: flex;
+		flex-direction: column;
+		
+		input {
+			margin-right: 1em;
+		}
+	}
+}

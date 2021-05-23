@@ -1,6 +1,7 @@
 // import React from "react";
 import Contact from "views/Contact";
 import Register from "views/register/Register";
+import Checkin from "views/checkin/Checkin";
 import ConfirmEmail from "./register/ConfirmEmail";
 import Purchase from "./register/Purchase";
 import Verify from "./register/Verify";
@@ -45,5 +46,9 @@ export default [
 	{
 		path: "/ticket",
 		view: Review,
+	},
+	{
+		path: "/checkin",
+		view: Checkin,
 	},
 ];

@@ -27,7 +27,8 @@ mongodb = "1.1"
 juniper = "0.15"
 # juniper_rocket_async = { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
 # stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async"] }
-stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async", "default-tls", "events"], git = "https://github.com/grantperry/stripe-rs.git", branch = "payment-intent-update-payment-method" }
+#stripe-rust = { version = "0.12.3", default-features = false, features = ["full", "async", "default-tls", "events"], git = "https://github.com/grantperry/stripe-rs.git", branch = "payment-intent-update-payment-method" }
+async-stripe = { version = "0.13.0-rc3", default-features = false, features = ["runtime-tokio-hyper", "webhook-events", "checkout", "billing"] }
 rand = "0.7"
 reqwest = { version = "0.10", features = ["json", "blocking"] }
 serde = {version = "1.0", features = ["derive"] }
@@ -35,8 +36,8 @@ serde_json = "1.0"
 futures = "0.3"
 tonic = "0.3"
 
-actix-web = "2.0"
-actix-rt = "1.0"
-actix-cors = "0.2"
+actix-web = "3"
+actix-rt = "1"
+actix-cors = "0.5"
 env_logger = "0.7.1"
 async-trait = "0.1"

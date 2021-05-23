@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use bson::{doc, oid::ObjectId, Document};
 use futures::StreamExt;
 use mongodb::results::UpdateResult;
+use mongodb::results::DeleteResult;
 use std::error::Error;
 
 use crate::graphql::context::CustomContext;
@@ -130,6 +131,37 @@ pub trait Update: Serialize {
 			.db
 			.collection(Self::COLLECTION)
 			.update_one(selector, doc, None)
+			.await
+			.map_err(|e| e.into())
+	}
+}
+
+#[async_trait]
+pub trait Delete: Serialize {
+	const COLLECTION : &'static str;
+
+	async fn delete(&self, context : &CustomContext) -> Result<DeleteResult, Box<dyn Error>> {
+		let doc = bson::to_bson(&self)
+			.unwrap()
+			.as_document()
+			.unwrap()
+			.to_owned();
+
+		let id = doc.get("_id").map(|id| id.as_object_id()).flatten();
+
+		let selector = match id {
+			Some(id) => {
+				doc! {
+					"_id": id
+				}
+			},
+			None => return Err("Serialized Document does not contain \"_id\"".into()),
+		};
+
+		context
+			.db
+			.collection(Self::COLLECTION)
+			.delete_one(selector, None)
 			.await
 			.map_err(|e| e.into())
 	}

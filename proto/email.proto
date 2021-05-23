@@ -3,6 +3,7 @@ package email;
 
 service Email {
 	rpc verify (User) returns (EmailResponse);
+	rpc notifyDriverNewPassenger (Vehicle) returns (EmailResponse);
 }
 
 message EmailResponse {
@@ -10,5 +11,9 @@ message EmailResponse {
 }
 
 message User {
+	string id = 1;
+}
+
+message Vehicle {
 	string id = 1;
 }
