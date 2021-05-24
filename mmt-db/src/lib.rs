@@ -97,9 +97,6 @@ pub trait Update: Serialize {
 
     async fn update(&self, db: &Database) -> Result<UpdateResult, Box<dyn Error>> {
         let doc = bson::to_document(&self).unwrap().to_owned();
-        let doc = doc! {
-            "$set": doc
-        };
 
         let id = doc.get("_id").map(|id| id.as_object_id()).flatten();
 
@@ -110,6 +107,10 @@ pub trait Update: Serialize {
                 }
             }
             None => return Err("Serialized Document does not contain \"_id\"".into()),
+        };
+
+        let doc = doc! {
+            "$set": doc
         };
 
         let coll = db.collection::<Document>(Self::COLLECTION);
