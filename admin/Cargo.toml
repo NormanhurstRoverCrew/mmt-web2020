@@ -1,0 +1,15 @@
+[package]
+name = "admin-server"
+version = "0.1.0"
+authors = ["Grant Perry <grant42perry@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "server"
+path = "server/server.rs"
+
+[dependencies]
+rocket = { version = "0.4" }
+rocket_contrib = { version = "0.4" }

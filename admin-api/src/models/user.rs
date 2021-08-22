@@ -21,7 +21,7 @@ pub struct UserUpdate {
 	pub email :          String,
 	pub mobile :         String,
 	pub crew :           String,
-	pub diet :           String,
+	pub diet :           Option<String>,
 	pub email_verified : bool,
 }
 

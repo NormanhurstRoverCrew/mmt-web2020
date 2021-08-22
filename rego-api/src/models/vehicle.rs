@@ -1,7 +1,7 @@
 use crate::{graphql::context::CustomContext, models::Ticket};
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
-use mmt::{Create, Db, Update, DB};
+use mmt::{Create, Db,  DB};
 use serde::{Deserialize, Serialize};
 
 #[derive(GraphQLInputObject, Clone, Debug, Serialize)]
@@ -30,7 +30,7 @@ pub struct Vehicle {
 impl Vehicle {
 	pub fn new(rego : String, name : String, driver : &Ticket) -> Option<Self> {
 		match rego {
-			rego if rego.len() <= 6 => Some(Self {
+			rego if rego.len() > 1 => Some(Self {
 				id : ObjectId::new(),
 				rego,
 				name,
@@ -41,7 +41,7 @@ impl Vehicle {
 		}
 	}
 
-	async fn get_driver(&self, context : &CustomContext) -> Ticket {
+	pub async fn get_driver(&self, context : &CustomContext) -> Ticket {
 		Ticket::get(&context.db, &self.driver_ticket).await.unwrap()
 	}
 
@@ -59,7 +59,9 @@ impl Vehicle {
 		.await
 	}
 
-	pub fn request_ticket(&mut self, ticket : &Ticket) { self.requested_tickets.push(ticket.id.clone()); }
+	pub fn request_ticket(&mut self, ticket : &Ticket) {
+		self.requested_tickets.push(ticket.id.clone());
+	}
 }
 
 #[juniper::graphql_object(Context = CustomContext)]

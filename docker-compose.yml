@@ -51,7 +51,7 @@ services:
       build: rego-api/.
       command: cargo watch -d0.1 -x run
       ports:
-         - 8082:8000
+         - 8082:8082
       volumes:
          - ./rego-api/src:/e/src
          - ./rego-api/Cargo.toml:/e/Cargo.toml
@@ -98,6 +98,7 @@ services:
          EMAIL_RETURN: ${MMT20_EMAIL_RETURN}
          SENTRY_ADDRESS: ${MMT20_SENTRY_ADMIN_API}
          STRIPE_API_KEY: ${MMT20_STRIPE_API_KEY}
+         ADMIN_ORIGIN: "http://localhost:8081"
    email:
       build: email/.
       command: cargo watch -d0.1 -x run

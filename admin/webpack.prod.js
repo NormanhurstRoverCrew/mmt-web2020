@@ -5,10 +5,10 @@ const common = require('./webpack.common.js');
 
 module.exports = merge(common, {
 	entry: {
-		main: './client/index.js',
-		views: './client/views/index.js',
-		store: './client/store/index.js',
-		actions: './client/actions/index.js',
+		main: './src/index.js',
+		views: './src/views/index.js',
+		// store: './src/store/index.js',
+		actions: './src/actions/index.js',
 	},
 	output: {
 		filename: '[name].[contenthash:8].js',

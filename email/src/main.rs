@@ -1,12 +1,9 @@
+use mmt::email::email_server::EmailServer;
 use mongodb::Client as Mongo;
 use tonic::transport::Server;
-
-use mmt::email::email_server::EmailServer;
-
 mod models;
 mod rpcimpl;
 mod transport;
-
 use rpcimpl::Email;
 use transport::EmailTransport;
 

@@ -16,8 +16,9 @@ export const PaymentTableDetails = ({classes, booking}) => {
 		<Grid container spacing={4} className={classNames(classes.root)}>
 			{_.map(booking.payment.transactions, (tx, i) => {
 				return (
-					<Grid item key={i} xs={2}>
+					<Grid item key={i} xs={4}>
 						<Paper className={classNames(classes.paper)}>
+							<Typography>Id: {tx.id}</Typography>
 							<Typography>Method: {tx.method}</Typography>
 							<Typography>
 								Amount: {fmtCurrency.format(tx.value)}

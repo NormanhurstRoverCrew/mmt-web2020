@@ -1,13 +1,15 @@
 use bson::doc;
+use serde::{Serialize, Deserialize};
 use mongodb::{Collection, Database};
 use std::sync::Arc;
 use stripe::Client;
-use tonic::transport::Endpoint;
+use mmt::email::email_client::EmailClient;
+use tonic::transport::Channel;
 
 pub struct CustomContext {
 	pub db :     Arc<Database>,
 	pub stripe : Arc<Client>,
-	pub email :  Arc<Endpoint>,
+	pub email :  Arc<EmailClient<Channel>>,
 }
 
 impl CustomContext {
@@ -16,32 +18,30 @@ impl CustomContext {
 	pub fn tickets_handel(&self) -> Collection { self.db.collection("tickets") }
 	pub fn vehicles_handel(&self) -> Collection { self.db.collection("vehicles") }
 	pub async fn index(&self, i : &str) -> i32 {
-		let indexes = self.db.collection("indexes");
+		let indexes = self.db.collection::<Index>("indexes");
 		loop {
 			match indexes
 				.find_one_and_update(
 					doc! {
-							"name" :i,
+						"name" : i,
 					},
 					doc! {
-							"$inc" :{
-									"seq" :1,
-							}
+						"$inc" : {
+							"seq" : 1,
+						}
 					},
 					None,
 				)
 				.await
 			{
 				Ok(Some(doc)) => {
-					return doc.get_i32("seq").expect("Sequence Number");
+					return doc.seq;
 				},
 				_ => {
 					indexes
 						.insert_one(
-							doc! {
-									"name" :i,
-									"seq" :1,
-							},
+                            Index {name:i.to_owned(),
+                            seq: 1},
 							None,
 						)
 						.await
@@ -53,3 +53,9 @@ impl CustomContext {
 }
 
 impl juniper::Context for CustomContext {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Index {
+    name: String,
+    seq:i32,
+}

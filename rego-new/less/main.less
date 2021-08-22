@@ -1,14 +1,22 @@
+* {
+	box-sizing: border-box;
+}
+
 html {
-	background: rgb(241,158,250);
+	background: rgb(241, 158, 250);
 }
 
 body {
 	font-family: "Roboto", "Helvetica Neue", Helvetica, Arial;
 	font-weight: 400;
 	font-size: 1.5em;
-	background: linear-gradient(145deg, rgba(241,158,250,1) 0%, rgba(206,0,133,1) 100%);
+	background: linear-gradient(
+		145deg,
+		rgba(241, 158, 250, 1) 0%,
+		rgba(206, 0, 133, 1) 100%
+	);
 	color: white;
-	text-shadow: 0.3em 0.3em 1.5em rgba(204,0,133,0.9);
+	text-shadow: 0.3em 0.3em 1.5em rgba(204, 0, 133, 0.9);
 }
 
 h2 {
@@ -16,8 +24,15 @@ h2 {
 	font-weight: 500;
 }
 
+a {
+	color: #2143f3;
+}
 .pink-bg {
-	background: linear-gradient(145deg, rgba(241,158,250,1) 0%, rgba(206,0,133,1) 100%);
+	background: linear-gradient(
+		145deg,
+		rgba(241, 158, 250, 1) 0%,
+		rgba(206, 0, 133, 1) 100%
+	);
 }
 
 #main {
@@ -25,8 +40,8 @@ h2 {
 	overflow-y: scroll;
 
 	// Hide Scroll
-	-ms-overflow-style: none;  /* IE and Edge */
-	scrollbar-width: none;  /* Firefox */
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
 }
 
 // Hide scroll
@@ -39,7 +54,9 @@ h2 {
 }
 
 // Cancel out normal button styling
-button, input[type="submit"], input[type="reset"] {
+button,
+input[type="submit"],
+input[type="reset"] {
 	background: none;
 	color: inherit;
 	border: none;
@@ -53,14 +70,14 @@ button {
 	font-size: 0.5em;
 	display: inline-block;
 	padding: 0.35em 1.2em;
-	border: 0.1em solid #FFFFFF;
+	border: 0.1em solid #ffffff;
 	margin: 0 0.3em 0.3em 0;
 	border-radius: 0.12em;
 	box-sizing: border-box;
 	text-decoration: none;
-	font-weight:400;
-	color:#FFFFFF;
-	text-align:center;
+	font-weight: 400;
+	color: #ffffff;
+	text-align: center;
 	transition: all 0.2s;
 
 	@media screen and (min-width: 40em) {
@@ -71,7 +88,7 @@ button {
 @title-size: 33vw;
 
 .title {
-	font-family: 'Racing Sans One', cursive;
+	font-family: "Racing Sans One", cursive;
 	text-transform: uppercase;
 	font-size: @title-size;
 	line-height: 0.75;
@@ -118,7 +135,7 @@ button {
 	line-height: unset;
 }
 
-.mui-textfield--float-label>input:not(:focus).mui--is-not-empty~label {
+.mui-textfield--float-label > input:not(:focus).mui--is-not-empty ~ label {
 	color: white;
 }
 
@@ -127,8 +144,17 @@ button {
 	line-height: unset;
 }
 
-.mui-textfield, .mui--text-body1 {
+.mui-textfield,
+.mui--text-body1 {
 	padding-bottom: 0.8em;
+}
+
+.mui-select>select, .mui-select>label {
+	color: white;
+}
+
+.mui-select__menu {
+	background-color: rgba(206, 0, 133, 1);
 }
 
 .errors {
@@ -143,6 +169,9 @@ button {
 }
 
 @import "home";
+@import "register";
 @import "purchase";
 @import "booking_summary";
 @import "checkout";
+@import "checkin";
+@import "manage_vehicle";

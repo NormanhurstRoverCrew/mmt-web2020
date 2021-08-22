@@ -3,7 +3,12 @@ package email;
 
 service Email {
 	rpc verify (User) returns (EmailResponse);
+
 	rpc notifyDriverNewPassenger (Vehicle) returns (EmailResponse);
+
+	rpc onboardBooking (Booking) returns (EmailResponse);
+
+	rpc ticketTeamUpdate (TicketTeamUpdate) returns (EmailResponse);
 }
 
 message EmailResponse {
@@ -16,4 +21,20 @@ message User {
 
 message Vehicle {
 	string id = 1;
+}
+
+message Booking {
+	string id = 1;
+}
+
+enum UpdateType {
+	ACCEPT = 0;
+	DECLINE = 1;
+	REMOVE = 2;
+}
+
+message TicketTeamUpdate {
+	string ticket_id = 1;
+	string vehicle_id = 2;
+	UpdateType update_type = 3;
 }

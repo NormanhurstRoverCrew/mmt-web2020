@@ -26,7 +26,7 @@ module.exports = {
 						],
 						plugins: [
 							["module-resolver", {
-								"root": ["./client/**", "./tests/**"],
+								"root": ["./src/**", "./tests/**"],
 							}]
 						]
 					}
@@ -65,7 +65,7 @@ module.exports = {
 	},
 	plugins: [
 		new HtmlWebPackPlugin({
-			template: "./client/index.html",
+			template: "./src/index.html",
 			filename: "./index.html"
 		}),
 		new webpack.HashedModuleIdsPlugin(), // so that file hashes don't change unexpectedly

@@ -11,9 +11,11 @@ import EmailSelector from 'components/EmailSelector';
 import {BookingContext} from 'context/BookingContext';
 
 export const TicketTable = ({}) => {
-	const {tickets} = useContext(BookingContext);
+	const {tickets, deleteTickets} = useContext(BookingContext);
 
 	const [emailSelectDialog, updateEmailSelectDialog] = useState(false);
+	const [deleteConfirmationDialog, updateDeleteConfirmationDialog] = useState(false);
+	const [ticketsForDeletion, updateTicketsForDeletion] = useState([]);
 
 	const handleSendEmail = (e, rows) => {
 		updateEmailSelectDialog(true);
@@ -25,6 +27,22 @@ export const TicketTable = ({}) => {
 		// this.setState({emailSelectDialog: false, tickets: []});
 	};
 
+		const handleDeleteTickets = (e, rows) => {
+				// Tickets that need to be deleted
+				updateTicketsForDeletion(rows);
+				updateDeleteConfirmationDialog(true);
+		}
+
+	const handleDeleteConfirmClosed = e => {
+		updateDeleteConfirmationDialog(false);
+	};
+
+		const handleDelete = e => {
+				handleDeleteConfirmClosed(e);
+
+				deleteTickets(ticketsForDeletion);
+		};
+
 	return (
 		<>
 			<Grid item xs={12}>
@@ -34,7 +52,7 @@ export const TicketTable = ({}) => {
 						{
 							title: 'Verified',
 							render: rowData => (
-								<div>{rowData.user.email_verified ? 'Yes' : 'No'}</div>
+								<div>{rowData.user.emailVerified ? 'Yes' : 'No'}</div>
 							),
 						},
 						{title: 'Name', field: 'user.name'},
@@ -65,11 +83,22 @@ export const TicketTable = ({}) => {
 							tooltip: 'Send Email',
 							onClick: handleSendEmail,
 						},
+						{
+							icon: 'delete',
+							tooltip: 'Delete ticket/s',
+							onClick: handleDeleteTickets,
+						},
 					]}
 				/>
 			</Grid>
 			<Modal open={emailSelectDialog} onClose={handelEmailSelectorClose}>
 				<EmailSelector tickets={tickets} />
+			</Modal>
+			<Modal open={deleteConfirmationDialog} onClose={handleDeleteConfirmClosed}>
+				<>
+					<h2>Are you sure you want to delete {ticketsForDeletion.length} tickets?</h2>
+					<button onClick={handleDelete}>Delete</button>
+				</>
 			</Modal>
 		</>
 	);

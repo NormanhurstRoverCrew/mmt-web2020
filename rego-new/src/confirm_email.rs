@@ -11,12 +11,13 @@ use yew_router::{
 use crate::{
     app::AppRoute,
     booking_agent::{self, BookingAgent},
+    ObjectId,
 };
 
 #[derive(GraphQLQuery)]
 #[graphql(
-    schema_path = "schema.json",
-    query_path = "verify_user.graphql",
+    schema_path = "graphql/schema.json",
+    query_path = "graphql/verify_user.graphql",
     response_derives = "Debug"
 )]
 struct VerifyUser;

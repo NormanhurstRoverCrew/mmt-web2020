@@ -10,9 +10,11 @@ import VehicleEditor from "../../components/VehicleEditor";
 import { teamsActions } from "../../actions/teams.actions";
 
 import {BookingContext} from 'context/BookingContext';
+import {VehicleContext} from 'context/VehicleContext';
 
 export const Vehicle = ({classes, vehicle}) => {
 	var {tickets} = useContext(BookingContext);
+	var {approveTicket, denyTicket} = useContext(VehicleContext);
 		const [editorOpen, setEditorOpen] = useState(false);
 
 		const handleVehicleClosed = () => {
@@ -36,8 +38,8 @@ export const Vehicle = ({classes, vehicle}) => {
 		const rRequests = renderTickets(vehicle.requests, (ticket) => (
 						<Grid item xs={6} lg={4} md={3} key={ticket.id}>
 								<Ticket ticket={ticket} />
-								<Button>Approve Request</Button>
-								<Button>Deny Request</Button>
+								<Button onClick={() => approveTicket(vehicle.id, ticket.id)}>Approve</Button>
+								<Button onClick={() => denyTicket(vehicle.id, ticket.id)}>Deny</Button>
 						</Grid>
 		));
 

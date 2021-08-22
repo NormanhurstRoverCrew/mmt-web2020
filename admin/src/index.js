@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/browser';
 import ApolloClient from 'apollo-boost';
 import {ApolloProvider} from '@apollo/react-hooks';
 import {BrowserRouter} from 'react-router-dom';
+import Url from 'url-parse';
 
 Sentry.init({
 	dsn: 'https://b9b82efea5c44dcea771e159b491664f@sentry.io/1483117',
@@ -17,8 +18,15 @@ window.axios = axios;
 
 import 'style.scss';
 
+var graphql = new Url(window.location.href);
+graphql.set('pathname', "graphql");
+if (graphql.port == 8081) {
+		graphql.set('port', 8083);
+}
+console.log(graphql.href);
+
 const apolloClient = new ApolloClient({
-	uri: 'http://localhost:8083/graphql',
+	uri: graphql.href,
 	request: operation => {
 		const token = JSON.parse(localStorage.getItem('access_token'));
 		operation.setContext({

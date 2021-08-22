@@ -4,10 +4,12 @@ use crate::{
 };
 use bson::{doc, oid::ObjectId};
 use juniper::ID;
-use mmt::{Db, Delete, DB};
+use mmt::{db::Delete, Db, DB};
 use serde::{Deserialize, Serialize};
 
-pub const TICKET_PRICE : f64 = 30.0;
+// pub const TICKET_PRICE : f64 = 30.0;
+pub const TICKET_PRICE : f64 = 1.0;
+pub const STRIPE_RATE : f64 = 0.0175; // %
 
 #[derive(GraphQLInputObject, Clone, Debug)]
 pub struct TicketUpdate {
@@ -71,9 +73,15 @@ impl Ticket {
 
 	pub async fn destroy(&self, context : &CustomContext) {
 		if let Some(user) = self.user(&context).await {
-			user.delete(&context.db).await;
+			if let Err(e) = user.delete(&context.db).await {
+            eprintln!("Could not delete user from db: {}",e);
+            return;
+            }
+            
 		}
-		self.delete(&context.db).await;
+		if let Err(e) = self.delete(&context.db).await {
+            eprintln!("Could not delete ticket from db: {}",e);
+        }
 	}
 }
 
@@ -87,3 +95,5 @@ impl Ticket {
 
 	async fn user(&self, context : &CustomContext) -> User { self.user(context).await.unwrap() }
 }
+
+

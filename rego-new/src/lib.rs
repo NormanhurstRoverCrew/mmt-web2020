@@ -10,10 +10,16 @@ mod checkin;
 mod checkout;
 mod confirm_email;
 mod home;
+mod manage_vehicle;
 mod new_booking_form;
 mod purchase_tickets;
+mod vehicle_agent;
 
 mod booking_agent;
+mod ticket_agent;
+
+mod crews;
+pub use crews::CREWS;
 
 pub type ObjectId = String;
 

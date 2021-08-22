@@ -1,6 +1,10 @@
 use crate::{graphql::context::CustomContext, models::TICKET_PRICE, wire::TransactionInput};
+use std::str::FromStr;
+use stripe::PaymentIntentId;
+use stripe::PaymentIntent;
 use bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
+use stripe::Client;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Payment {
@@ -62,7 +66,7 @@ impl Transaction {
 		}
 	}
 
-	fn value(&self) -> f64 {
+	pub async fn value(&self, client: &Client) -> f64 {
 		match self {
 			Self::Cash {
 				value, ..
@@ -70,7 +74,19 @@ impl Transaction {
 			Self::ElectronicFundsTransfer {
 				value, ..
 			} => *value,
-			_ => -999.9,
+            Self::Stripe {
+                pi_id,
+                ..
+            } => {
+                let pi_id = PaymentIntentId::from_str(pi_id).unwrap();
+                PaymentIntent::retrieve(
+                    client,
+                    &pi_id,
+                    &[]
+                ).await.map(|pi| pi.amount_received).ok().flatten().unwrap_or(0) as f64 / 100.0
+
+            }
+            _ => -999.0
 		}
 	}
 
@@ -88,6 +104,19 @@ impl Transaction {
 			Self::None => "UNKNOWN",
 		}
 	}
+
+    fn id(&self) -> Option<String> {
+        match self {
+            Self::Stripe {
+                pi_id,
+                ..
+            } => Some(pi_id.to_owned()),
+            Self::Cash{..} => None,
+            Self::ElectronicFundsTransfer {
+                id,.. } => Some(id.to_hex()),
+                Self::None => None,
+        }
+    }
 }
 
 #[juniper::graphql_object(Context = CustomContext)]
@@ -95,7 +124,9 @@ impl Transaction {
 	/// Contact details
 	fn method(&self) -> &str { self.method() }
 
-	fn value(&self) -> f64 { self.value() }
+	async fn value(&self, context: &CustomContext) -> f64 { self.value(&context.stripe).await }
+
+    fn id(&self) -> Option<String> { self.id() }
 }
 
 impl From<TransactionInput> for Transaction {

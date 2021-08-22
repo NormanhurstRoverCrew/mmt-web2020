@@ -8,22 +8,24 @@ edition = "2018"
 
 [dependencies]
 mmt = { path = "../mmt" }
-actix-web = "3"
-actix-web-httpauth = "0.5"
-actix-cors = "0.5"
-actix-service = "2"
-# chrono = { version = "0.4.10", features = ["serde"] }
+actix-web = "4.0.0-beta.6"
+actix-web-httpauth = { git = "https://github.com/nhruo123/actix-extras", branch = "beta-6-patch" }
+actix-cors = { git = "https://github.com/near/actix-extras.git", branch = "actix-web-4-beta.6" }
+actix-service = "2.0.0"
+chrono = { version = "0.4.10", features = ["serde"] }
 derive_more = "0.99.2"
 dotenv = "0.15.0"
 futures = "0.3"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "=1.0.125", features = ["derive"] }
 serde_json = "1.0"
 # alcoholic_jwt = "1.0.0"
 alcoholic_jwt = { git = "https://github.com/Dispersia/alcoholic_jwt.git", commit = "59158c7436e45b57ea51cef8e24e5869fa29e5d1" }
 reqwest = { version = "0.11", features = ["json"] }
-actix-rt = "2"
-mongodb = "1.2"
-juniper = "0.15"
-bson = "1.0"
+actix-rt = "2.2"
+mongodb = "2.0.0-beta"
+# juniper = "0.15"
+juniper = { git = "https://github.com/grantperry/juniper.git", branch = "bson2" }
+bson = "2.0.0-beta"
 base64 = "0.13"
 lazy_static = "1.4"
+async-stripe = { version = "0.13.0-rc3", default-features = false, features = ["runtime-tokio-hyper", "checkout", "billing"] }

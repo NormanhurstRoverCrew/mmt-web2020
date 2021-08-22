@@ -1,0 +1,5 @@
+mutation VehicleDeclineTicket($vehicle_id: ObjectId!, $ticket_id: ObjectId!) {
+	vehicleDeclineTicket(vehicle: $vehicle_id, ticket: $ticket_id) {
+		id
+	}
+}

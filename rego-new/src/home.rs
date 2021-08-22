@@ -1,37 +1,28 @@
 use crate::app::AppRoute;
 use yew::prelude::*;
-use yew_router::agent::RouteAgentDispatcher;
-use yew_router::agent::RouteRequest;
 use yew_router::prelude::RouterButton;
 
 pub struct Home {
-    link: ComponentLink<Self>,
-    router: RouteAgentDispatcher<AppRoute>,
+    // link: ComponentLink<Self>,
+// router: RouteAgentDispatcher<AppRoute>,
 }
 
-pub enum Msg {
-    Register,
-}
+pub enum Msg {}
 
 impl Component for Home {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
         Self {
-            link,
-            router: RouteAgentDispatcher::new(),
+            // link,
+            // router: RouteAgentDispatcher::new(),
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        match msg {
-            Msg::Register => {
-                self.router
-                    .send(RouteRequest::ChangeRoute(AppRoute::Register.into()));
-                false
-            }
-        }
+    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+        // match msg {}
+        false
     }
 
     fn change(&mut self, _: Self::Properties) -> bool {
@@ -65,7 +56,7 @@ impl Component for Home {
                         <div class="element-single bg-dark">
                             <h2>{"Meeting Point"}</h2>
                             <p>
-                                {"Meet your team at Thornleigh Maccas Overflow carpark at 8am on Saturday Morning."}
+                                {"Meet your team at Thornleigh Maccas overflow carpark at 8am on Saturday morning."}
                             </p>
                         </div>
                         <div class="element-single bg-dark">
@@ -83,16 +74,24 @@ impl Component for Home {
                         <div class="element-single bg-dark">
                             <h2>{"The end point"}</h2>
                             <p>
-                                {"You will arrive at a mystery location approximatly three hourse out of Sydney where good times await you."}
+                                {"You will arrive at a mystery location approximately three hours out of Sydney where good times await you."}
                             </p>
                         </div>
                         <div class="element-single bg-dark">
-                            <h2>{"Contact"}</h2>
+                            <h2>{"Facebook Event"}</h2>
                             <p>
-                                {"My contact deets"}
+                                {"Look at the "}
+                                <a href="https://www.facebook.com/events/807816656354607">{"Facebook Event"}</a>
+                                {" for the most up to date information. We will be posting there regularly so make sure you click going!"}
                             </p>
+                        </div>
+                        <div class="element-single bg-dark">
+                            <h2>{"Admin / Website issues"}</h2>
                             <p>
-                                {"Social Media shit"}
+                                {"If you have any issues please contact Grant on "}
+                                <a href="https://www.facebook.com/messages/t/100009414012698">{"Facebook Messenger"}</a>
+                                {" or email the crew "}
+                                <a href={"mailto:2ndnormorovers@gmail.com"}>{"2ndnormorovers@gmail.com"}</a>
                             </p>
                         </div>
                     </div>

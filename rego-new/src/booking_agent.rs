@@ -13,6 +13,7 @@ use yew::{
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Booking {
     pub id: ObjectId,
+    pub index: i64,
     pub user: User,
     pub tickets: Vec<Ticket>,
 }
@@ -20,6 +21,7 @@ pub struct Booking {
 impl From<get_booking::GetBookingBookingFromUser> for Booking {
     fn from(b: get_booking::GetBookingBookingFromUser) -> Self {
         let id = b.id;
+        let index = b.no;
         let tickets: Vec<Ticket> = b.tickets.into_iter().map(|t| t.into()).collect();
         let user_id = b.user.id;
         let user = tickets
@@ -27,7 +29,12 @@ impl From<get_booking::GetBookingBookingFromUser> for Booking {
             .find(|t| &t.user.id == &user_id)
             .map(|t| t.user.clone())
             .unwrap();
-        Self { id, user, tickets }
+        Self {
+            id,
+            user,
+            tickets,
+            index,
+        }
     }
 }
 
@@ -80,8 +87,8 @@ impl From<get_booking::GetBookingBookingFromUserTicketsUser> for User {
 
 #[derive(GraphQLQuery)]
 #[graphql(
-    schema_path = "schema.json",
-    query_path = "get_booking.graphql",
+    schema_path = "graphql/schema.json",
+    query_path = "graphql/get_booking.graphql",
     response_derives = "Debug, Serialize, Clone, Default"
 )]
 struct GetBooking;

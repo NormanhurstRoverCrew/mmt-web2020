@@ -32,6 +32,7 @@ const GET_BOOKING = gql`
 			payment {
 				ticketPrice
 				transactions {
+					id
 					value
 					method
 				}
@@ -40,22 +41,22 @@ const GET_BOOKING = gql`
 	}
 `;
 
-const UPDATE_TICKET = gql`
-	mutation UpdateTicket($ticket: TicketUpdate!) {
-		updateTicket(ticket: $ticket) {
+const UPDATE_TICKETS = gql`
+	mutation UpdateTickets($tickets: [TicketUpdate!]!) {
+		updateTickets(tickets: $tickets) {
 			id
 		}
 	}
 `;
 
 const DELETE_TICKETS = gql`
-	mutation DeleteTickets($tids: [String!]!) {
-		updateTicket(ticketIds: $tids)
+	mutation DeleteTickets($tids: [ObjectId!]!) {
+		deleteTickets(ticketIds: $tids)
 	}
 `;
 
 const BOOKING_DELETE = gql`
-	mutation DeleteBooking($bid: String!) {
+	mutation DeleteBooking($bid: ObjectId!) {
 		deleteBooking(bookingId: $bid)
 	}
 `;
@@ -100,7 +101,7 @@ const BookingContextProvider = ({children}) => {
 		}
 	}, [bookingsQueryData]);
 
-	const [_updateTicket, {data: dataUpdateTicket}] = useMutation(UPDATE_TICKET);
+	const [_updateTickets, {data: dataUpdateTickets}] = useMutation(UPDATE_TICKETS);
 	const updateTicket = ticket => {
 		var ticket = _.pick(ticket, 'id', 'user');
 		ticket = _.extend(ticket, {
@@ -114,20 +115,19 @@ const BookingContextProvider = ({children}) => {
 				'emailVerified',
 			),
 		});
-		console.log(ticket);
 
-		_updateTicket({
+		_updateTickets({
 			variables: {
-				ticket,
+				tickets: [ticket],
 			},
 		});
 	};
 
 	useEffect(() => {
-		if (dataUpdateTicket) {
+		if (dataUpdateTickets) {
 			refetchBookings();
 		}
-	}, [dataUpdateTicket]);
+	}, [dataUpdateTickets]);
 
 	const [_deleteTickets, {data: dataDeleteTickets}] = useMutation(
 		DELETE_TICKETS,

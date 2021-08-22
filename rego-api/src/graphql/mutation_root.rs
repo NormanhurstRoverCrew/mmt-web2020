@@ -1,17 +1,20 @@
 use crate::{
-	graphql::{context::CustomContext, util::string_to_id},
+	graphql::context::CustomContext,
 	models::{BasicUser, Booking, BookingTicketUpdate, Ticket, TicketUpdate, User, Vehicle},
 };
 use bson::{doc, oid::ObjectId, Document};
 use futures::{
-	future::{join, join3, try_join},
+	future::{join, join4, join3, try_join},
 	stream::FuturesUnordered,
 	FutureExt, StreamExt,
 };
 use juniper::{graphql_value, FieldError, FieldResult};
 use mmt::{
-	db::{Create, Db, Delete, Update},
+	db::{Create, Db, Update},
 	email::User as EmailUser,
+	email::Vehicle as EmailVehicle,
+    email::UpdateType
+        ,email::TicketTeamUpdate,
 };
 use std::{collections::HashSet, iter::Iterator};
 use stripe::{PaymentIntent, UpdatePaymentIntent};
@@ -22,7 +25,59 @@ pub struct MutationRoot;
 )]
 impl MutationRoot {
 	async fn newUser(context : &CustomContext, user : BasicUser) -> FieldResult<Option<User>> {
-		let user : User = user.into();
+        dbg!(&user);
+		let mut user : User = user.into();
+
+        user.email.retain(|c| !c.is_whitespace());
+        user.mobile.retain(|c| !c.is_whitespace());
+
+		let mut errors = vec![];
+
+			if user.name.len() == 0 {
+				errors.push(("name", "Too short"));
+			}
+
+			if user.email.len() == 0 {
+				errors.push(("email", "Too short"));
+			}
+
+            if !validator::validate_email(&user.email) {
+				errors.push(("email", "Invalid: Please use a correct email"));
+            }
+
+			if user.mobile.len() == 0 {
+				errors.push(("mobile", "Too short"));
+			}
+
+            if !user.mobile.chars().all(char::is_numeric) {
+                errors.push(("mobile", "Can only contain digits 0-9. No hyphens, text or other markings"));
+            }
+           
+			if user.crew.len() == 0 {
+				errors.push(("crew", "Select a crew"));
+			}
+            
+
+		if !errors.is_empty() {
+			let mut o = juniper::Object::with_capacity(2);
+			o.add_field("type", "FIELD_VALIDATION".into());
+			let errors = errors
+				.into_iter()
+				.map(|error| {
+					let mut o = juniper::Object::with_capacity(2);
+					o.add_field("field", error.0.into());
+					o.add_field("advice", error.1.into());
+					o.into()
+				})
+				.collect::<Vec<juniper::Value>>();
+			o.add_field("advice", juniper::Value::list(errors));
+
+			return Err(juniper::FieldError::new(
+				"Field Validation failed",
+				o.into(),
+			));
+		}
+
 		let user_id = match user.create(&context.db).await {
 			Ok(inserted_id) => inserted_id,
 			Err(_) => {
@@ -51,27 +106,34 @@ impl MutationRoot {
 
 		let mut rpc_email = (&*context.rpc_email).clone();
 
-		dbg!(rpc_email.verify(euser).await)
-			.map(|r| {
-				dbg!(r.into_inner());
-				Some(user)
-			})
-			.map_err(|_| {
-				juniper::FieldError::new(
+		match rpc_email.verify(euser).await{
+            Ok(resp) if resp.get_ref().success => {
+                Ok(Some(user))
+            }
+            Ok(_) => {
+				Err(juniper::FieldError::new(
+					"Failed to send email, please try again later or contact Admin",
+					graphql_value!({
+						"type": "EMAIL_ERROR"
+					}),
+				))
+            }
+            Err(_) => {
+				Err(juniper::FieldError::new(
 					"User is not owner of booking",
 					graphql_value!({
 						"type": "USER_BOOKING_NOT_FOUND"
 					}),
-				)
-			})
+				))
+            }
+        }
 	}
 
-	async fn verifyUser(context : &CustomContext, id : String, code : String) -> FieldResult<User> {
-		let id = match string_to_id(&id) {
-			Ok(id) => id,
-			Err(e) => return Err(e),
-		};
-
+	async fn verifyUser(
+		context : &CustomContext,
+		id : ObjectId,
+		code : String,
+	) -> FieldResult<User> {
 		let mut user = match User::get(&context.db, &id).await {
 			Some(user) => user,
 			None => {
@@ -112,46 +174,60 @@ impl MutationRoot {
 					graphql_value!({"type": "BOOKING_NOT_FOUND"}),
 				))?;
 
-        let mut errors = vec![];
-        for (i,ticket) in tickets.iter().enumerate() {
-            let BookingTicketUpdate { user: BasicUser { name, email, mobile, crew }, id } = ticket;
-            let id = id.as_ref().map(|id| id.to_hex()).unwrap_or(format!("{}",i));
+		let mut errors = vec![];
+		for (i, ticket) in tickets.iter().enumerate() {
+			let BookingTicketUpdate {
+				user: BasicUser {
+					name,
+					email,
+					mobile,
+					crew,
+				},
+				id,
+			} = ticket;
+			let id = id
+				.as_ref()
+				.map(|id| id.to_hex())
+				.unwrap_or(format!("{}", i));
 
-            if name.len() == 0 {
-                errors.push((i, id.clone(), "name", "Too short"));
-            }
+			if name.len() == 0 {
+				errors.push((i, id.clone(), "name", "Too short"));
+			}
 
-            if email.len() == 0 {
-                errors.push((i, id.clone(), "email", "Too short"));
-            }
+			if email.len() == 0 {
+				errors.push((i, id.clone(), "email", "Too short"));
+			}
 
-            if mobile.len() == 0 {
-                errors.push((i, id.clone(), "mobile", "Too short"));
-            }
+			if mobile.len() == 0 {
+				errors.push((i, id.clone(), "mobile", "Too short"));
+			}
 
-            if crew.len() == 0 {
-                errors.push((i, id.clone(), "crew", "Too short"));
-            }
-        }
+			if crew.len() == 0 {
+				errors.push((i, id.clone(), "crew", "Too short"));
+			}
+		}
 
-        if !errors.is_empty() {
-            let mut o = juniper::Object::with_capacity(2);
-            o.add_field("type", "FIELD_VALIDATION".into());
-            let errors = errors.into_iter().map(|error| {
-                let mut o = juniper::Object::with_capacity(4);
-                o.add_field("idx", (error.0 as i32).into());
-                o.add_field("id", error.1.into());
-                o.add_field("field", error.2.into());
-                o.add_field("advice", error.3.into());
-                o.into()
-            }).collect::<Vec<juniper::Value>>();
-            o.add_field("advice", juniper::Value::list(errors));
+		if !errors.is_empty() {
+			let mut o = juniper::Object::with_capacity(2);
+			o.add_field("type", "FIELD_VALIDATION".into());
+			let errors = errors
+				.into_iter()
+				.map(|error| {
+					let mut o = juniper::Object::with_capacity(4);
+					o.add_field("idx", (error.0 as i32).into());
+					o.add_field("id", error.1.into());
+					o.add_field("field", error.2.into());
+					o.add_field("advice", error.3.into());
+					o.into()
+				})
+				.collect::<Vec<juniper::Value>>();
+			o.add_field("advice", juniper::Value::list(errors));
 
-            return Err(juniper::FieldError::new(
-                    "Field Validation failed",
-                    o.into()
-            ));
-        }
+			return Err(juniper::FieldError::new(
+				"Field Validation failed",
+				o.into(),
+			));
+		}
 
 		let updated_tickets : HashSet<ObjectId> =
 			futures::stream::iter(tickets.iter().filter(|t| t.id.is_some()))
@@ -162,10 +238,7 @@ impl MutationRoot {
 						.map(|t| (tid.clone(), t, update))
 				})
 				.filter_map(|(tid, real_ticket, update)| async move {
-					real_ticket
-						.user(&context)
-						.await
-						.map(|u| (tid, u, update))
+					real_ticket.user(&context).await.map(|u| (tid, u, update))
 				})
 				.map(|(tid, mut user, update)| {
 					let BasicUser {
@@ -343,11 +416,10 @@ impl MutationRoot {
 			.await)
 	}
 
-	async fn createStripePaymentIntentForBooking(
+	async fn create_stripe_payment_intent_for_booking(
 		context : &CustomContext,
 		booking_id : ObjectId,
 	) -> FieldResult<String> {
-        dbg!();
 		let mut booking = match Booking::get(&context.db, &booking_id).await {
 			Some(b) => b,
 			None => {
@@ -358,13 +430,17 @@ impl MutationRoot {
 			},
 		};
 
-        dbg!();
 		let spi = match booking.get_stripe_pi(context).await {
 			Some(spi) => spi,
 			None => booking
 				.create_stripe_payment_intent(context)
 				.await
-				.expect("PaymentIntent not created"),
+				.ok_or(
+					FieldError::new(
+						"Could not create Payment Intent",
+						graphql_value!({"type":"STRIPE_PAYMENT_INTENT"}),
+					)
+				)?,
 		};
 
 		// if let Ok(_) = PaymentIntent::update(
@@ -377,12 +453,12 @@ impl MutationRoot {
 		// )
 		// .await
 		// {
-			spi.client_secret.ok_or_else(|| {
-				FieldError::new(
-					"Booking not found",
-					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
-				)
-			})
+		spi.client_secret.ok_or_else(|| {
+			FieldError::new(
+				"Booking not found",
+				graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+			)
+		})
 		// } else {
 		// 	Err(FieldError::new(
 		// 		"Could not update PaymentIntent",
@@ -444,6 +520,9 @@ impl MutationRoot {
 		rego : String,
 		name : String,
 	) -> FieldResult<Vehicle> {
+        let mut rego = rego.to_uppercase();
+        rego.retain(|c|!c.is_whitespace());
+
 		let mut ticket = match join3(
 			Vehicle::find_one(
 				&context.db,
@@ -502,25 +581,22 @@ impl MutationRoot {
 			graphql_value!({"type":"DB_ERROR"}),
 		))?;
 
-		vehicle
-			.create(&context.db)
-			.await
-			.map_err(|_| {
-				FieldError::new(
-					"Could not create Vehicle",
-					graphql_value!({"type":"DB_ERROR"}),
-				)
-			})?;
+		vehicle.create(&context.db).await.map_err(|_| {
+			FieldError::new(
+				"Could not create Vehicle",
+				graphql_value!({"type":"DB_ERROR"}),
+			)
+		})?;
 
-        ticket.vehicle_id = Some(vehicle.id.clone());
-        ticket.update(&context.db).await.map_err(|_| {
-				FieldError::new(
-					"Could not add Vehicle ID to Ticket",
-					graphql_value!({"type":"DB_ERROR"}),
-				)
-        })?;
+		ticket.vehicle_id = Some(vehicle.id.clone());
+		ticket.update(&context.db).await.map_err(|_| {
+			FieldError::new(
+				"Could not add Vehicle ID to Ticket",
+				graphql_value!({"type":"DB_ERROR"}),
+			)
+		})?;
 
-        Ok(vehicle)
+		Ok(vehicle)
 	}
 
 	async fn passenger_add_vehicle(
@@ -528,7 +604,10 @@ impl MutationRoot {
 		passenger_ticket : ObjectId,
 		rego : String,
 	) -> FieldResult<Vehicle> {
-		let (mut vehicle, ticket) = match join3(
+        let mut rego = rego.to_uppercase();
+        rego.retain(|c|!c.is_whitespace());
+
+		let (mut vehicle, ticket) = match join4(
 			Vehicle::find_one(
 				&context.db,
 				doc! {
@@ -545,40 +624,48 @@ impl MutationRoot {
 				},
 			)
 			.map(|vdt| vdt.len()),
+            Vehicle::find_one(
+                &context.db,
+                doc! {
+                    "driver_ticket": &passenger_ticket,
+                }
+            )
 		)
 		.await
 		{
-            (Some(vehicle), Some(ticket), _) if vehicle.requested_tickets.contains(&ticket.id) => {
-                return Ok(vehicle);
-            }
-			(_, _, number_of_vehicles) if number_of_vehicles > 0 => {
+			(_, _, _, Some(_)) => {
+				return Err(FieldError::new(
+					"You are the driver of a team, you cannot join another team. If you want this changed, please contact Admin",
+					graphql_value!({"type":"ALREADY_DRIVER_OF_TEAM"}),
+				));
+			},
+            // Ticket already in vehicle
+			(Some(vehicle), Some(ticket), _, _) if vehicle.requested_tickets.contains(&ticket.id) => {
+                eprintln!("Ticket already contained in Vehicle");
+				return Ok(vehicle);
+			},
+			(_, _, number_of_vehicles, _) if number_of_vehicles > 0 => {
 				return Err(FieldError::new(
 					"You are already part of another Team/Vehicle",
 					graphql_value!({"type":"ALREADY_IN_TEAM"}),
 				));
 			},
-			(None, _, _) => {
+			(None, _, _, _) => {
 				return Err(FieldError::new(
 					"Vehicle does not exist",
 					graphql_value!({"type":"VEHICLE_NOT_FOUND"}),
 				));
 			},
-			(_, None, _) => {
+			(_, None, _, _) => {
 				return Err(FieldError::new(
 					"Ticket does not exist",
 					graphql_value!({"type":"TICKET_NOT_FOUND"}),
 				));
 			},
-			(Some(vehicle), Some(ticket), _) => (vehicle, ticket),
-			r => {
-				dbg!(r);
-				return Err(FieldError::new(
-					"I don't know how we go too this state. Look at the logs",
-					graphql_value!({"type":"WTF_ERROR"}),
-				));
-			},
+			(Some(vehicle), Some(ticket), _, _) => (vehicle, ticket),
 		};
 
+        dbg!();
 		vehicle.request_ticket(&ticket);
 		let ret = vehicle
 			.update(&context.db)
@@ -591,15 +678,17 @@ impl MutationRoot {
 				)
 			})?;
 
-        let user = ticket.user(&context).await.unwrap();
+		let user = ticket.user(&context).await.unwrap();
 
-		let euser = EmailUser {
-			id : user.id.to_hex(),
+		let evehicle = EmailVehicle {
+			id : ret.id.to_hex(),
 		};
 
 		let mut rpc_email = (&*context.rpc_email).clone();
 
-		rpc_email.verify(euser).await
+		rpc_email
+			.notify_driver_new_passenger(evehicle)
+			.await
 			.map(|r| {
 				dbg!(r.into_inner());
 				Some(user)
@@ -613,8 +702,7 @@ impl MutationRoot {
 				)
 			})?;
 
-
-        Ok(ret)
+		Ok(ret)
 	}
 
 	async fn vehicle_accept_ticket(
@@ -654,12 +742,156 @@ impl MutationRoot {
 		// write out both operations simultaneously
 		try_join(ticket.update(&context.db), vehicle.update(&context.db))
 			.await
-			.map(|_| vehicle)
 			.map_err(|_| {
 				FieldError::new(
 					"Booking not found",
 					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
 				)
+			})?;
+
+let mut rpc_email = (&*context.rpc_email).clone();
+
+let update = TicketTeamUpdate {
+    vehicle_id:vehicle.id.to_string(),
+    ticket_id:ticket.id.to_string(),
+        update_type: UpdateType::Accept as i32,
+};
+
+		rpc_email.ticket_team_update(update).await
+			.map(|r| {
+				dbg!(r.into_inner());
+                vehicle
 			})
+			.map_err(|_| {
+				juniper::FieldError::new(
+					"Failed to send email",
+					graphql_value!({
+						"type": "EMAIL_ERROR"
+					}),
+				)
+			})
+	}
+
+	async fn vehicle_decline_ticket(
+		context : &CustomContext,
+		vehicle : ObjectId,
+		ticket : ObjectId,
+	) -> FieldResult<Vehicle> {
+		// Get Vehicle and Ticket at the same time from mongo...
+		// If there is an error then exit
+		let (mut vehicle, ticket) = match join(
+			Vehicle::get(&context.db, &vehicle),
+			Ticket::get(&context.db, &ticket),
+		)
+		.await
+		{
+			(Some(v), Some(t)) => (v, t),
+			_ => {
+				return Err(FieldError::new(
+					"Vehicle and/or Ticket does not exist",
+					graphql_value!({"type":"DB_ERROR"}),
+				))
+			},
+		};
+
+        // Remove only the ticket id specified
+        vehicle.requested_tickets.retain(|t| t != &ticket.id);
+
+		// write out both operations simultaneously
+		vehicle.update(&context.db)
+			.await
+			.map_err(|_| {
+				FieldError::new(
+					"Booking not found",
+					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+				)
+			})?;
+
+let mut rpc_email = (&*context.rpc_email).clone();
+
+let update = TicketTeamUpdate {
+    vehicle_id:vehicle.id.to_string(),
+    ticket_id:ticket.id.to_string(),
+        update_type: UpdateType::Decline as i32,
+};
+
+		rpc_email.ticket_team_update(update).await
+			.map(|r| {
+				dbg!(r.into_inner());
+                vehicle
+			})
+			.map_err(|_| {
+				juniper::FieldError::new(
+					"Failed to send email",
+					graphql_value!({
+						"type": "EMAIL_ERROR"
+					}),
+				)
+			})
+	}
+
+	async fn vehicle_remove_ticket(
+		context : &CustomContext,
+		vehicle : ObjectId,
+		ticket : ObjectId,
+	) -> FieldResult<Vehicle> {
+		// Get Vehicle and Ticket at the same time from mongo...
+		// If there is an error then exit
+		let (vehicle, mut ticket) = match join(
+			Vehicle::get(&context.db, &vehicle),
+			Ticket::get(&context.db, &ticket),
+		)
+		.await
+		{
+			(Some(v), Some(t)) => (v, t),
+			_ => {
+				return Err(FieldError::new(
+					"Vehicle and/or Ticket does not exist",
+					graphql_value!({"type":"DB_ERROR"}),
+				))
+			},
+		};
+
+        if vehicle.driver_ticket == ticket.id {
+				return Err(FieldError::new(
+					"Cannot remove driver from Team",
+					graphql_value!({"type":"DRIVER_OWNS_TEAM"}),
+				))
+        }
+
+        ticket.vehicle_id = None;
+
+		// write out both operations simultaneously
+		ticket.update(&context.db)
+			.await
+			.map_err(|_| {
+				FieldError::new(
+					"Booking not found",
+					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+				)
+			})?;
+
+let mut rpc_email = (&*context.rpc_email).clone();
+
+let update = TicketTeamUpdate {
+    vehicle_id:vehicle.id.to_string(),
+    ticket_id:ticket.id.to_string(),
+        update_type: UpdateType::Remove as i32,
+};
+
+		rpc_email.ticket_team_update(update).await
+			.map(|r| {
+				dbg!(r.into_inner());
+                vehicle
+			})
+			.map_err(|_| {
+				juniper::FieldError::new(
+					"Failed to send email",
+					graphql_value!({
+						"type": "EMAIL_ERROR"
+					}),
+				)
+			})
+
 	}
 }

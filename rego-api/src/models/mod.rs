@@ -5,6 +5,6 @@ mod user;
 mod vehicle;
 pub use booking::Booking;
 pub use payment::{Payment, Transaction};
-pub use ticket::{BookingTicketUpdate, Ticket, TicketUpdate, TICKET_PRICE};
+pub use ticket::{BookingTicketUpdate, Ticket, TicketUpdate, STRIPE_RATE, TICKET_PRICE};
 pub use user::{BasicUser, User};
 pub use vehicle::{NewVehicle, Vehicle};

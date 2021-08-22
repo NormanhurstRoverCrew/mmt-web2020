@@ -1,0 +1,22 @@
+query Vehicle($vehicle_id: ObjectId!) {
+	vehicle(vehicleId: $vehicle_id) {
+		id
+		rego
+		name
+		driver
+		requests {
+			id
+			user {
+				name
+				crew
+			}
+		}
+		tickets {
+			id
+			user {
+				name
+				crew
+			}
+		}
+	}
+}

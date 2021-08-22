@@ -8,6 +8,7 @@ edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
+path = "src/lib.rs"
 
 [[bin]]
 name = "server"
@@ -15,19 +16,19 @@ path = "src/server.rs"
 required-features = ["server"]
 
 [dependencies]
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
-yew = "0.18"
-yew-router = "0.15"
-serde = "1.0"
-serde_json = "1.0"
-graphql_client = { git = "https://github.com/graphql-rust/graphql-client.git" }
-graphql_client_web = { git = "https://github.com/graphql-rust/graphql-client.git" }
-wasm-bindgen-futures = "0.4"
-futures = "0.3"
-querystring = "1.1"
-anyhow = "1.0"
-url = "2.2"
-js-sys = "0.3"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"], optional = true }
+yew = { version = "0.18", optional = true }
+yew-router = { version = "0.15", optional = true }
+serde = { version = "1.0", optional = true }
+serde_json = { version = "1.0", optional = true }
+graphql_client = { git = "https://github.com/graphql-rust/graphql-client.git", optional = true }
+graphql_client_web = { git = "https://github.com/graphql-rust/graphql-client.git", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+futures = { version = "0.3", optional = true }
+querystring = { version = "1.1", optional = true }
+anyhow = { version = "1.0", optional = true }
+url = { version = "2.2", optional = true }
+js-sys = { version = "0.3", optional = true }
 
 
 # server
@@ -36,6 +37,7 @@ rocket_contrib = { version = "0.4", optional = true }
 
 [dependencies.web-sys]
 version = "0.3"
+optional = true
 features = [
 "Window",
 "Location"
@@ -43,15 +45,16 @@ features = [
 
 [features]
 server = ["rocket", "rocket_contrib"]
+app = ["wasm-bindgen", "yew", "yew-router", "serde", "serde_json", "graphql_client", "graphql_client_web", "wasm-bindgen-futures", "futures", "querystring", "anyhow", "url", "js-sys", "web-sys"]
 
-[profile.release]
-# less code to include into binary
-panic = 'abort' 
-# optimization over all codebase ( better optimization, slower build )
-codegen-units = 1
-# optimization for size ( more aggressive )
-opt-level = 'z' 
-# optimization for size 
-# opt-level = 's' 
-# link time optimization using using whole-program analysis
-lto = true
+# [profile.release]
+# # less code to include into binary
+# panic = 'abort' 
+# # optimization over all codebase ( better optimization, slower build )
+# codegen-units = 1
+# # optimization for size ( more aggressive )
+# opt-level = 'z' 
+# # optimization for size 
+# # opt-level = 's' 
+# # link time optimization using using whole-program analysis
+# lto = true

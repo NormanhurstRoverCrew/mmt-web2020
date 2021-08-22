@@ -17,7 +17,7 @@ axios.defaults.url = 'http://backend:3000/api/';
 
 const PORT = 3000;
 let IP;
-const http = require('http');
+import http from 'http';
 
 const options = {
 	host: 'ipv4bot.whatismyipaddress.com',

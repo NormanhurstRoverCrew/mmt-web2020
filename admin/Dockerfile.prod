@@ -1,4 +1,4 @@
-FROM node:8-alpine
+FROM node:10-alpine as js
 
 WORKDIR /usr/src
 USER root
@@ -9,8 +9,37 @@ RUN npm config set unsafe-perm true
 COPY package.json .
 RUN npm install
 
-COPY . .
+COPY ./webpack.common.js .
+COPY ./webpack.prod.js .
+COPY ./crews.js .
+COPY ./server ./server
+COPY ./src ./src
 
 RUN npm run build
 
-CMD ["npm", "run", "prod"]
+FROM rustlang/rust:nightly as server
+
+# create a new empty shell project
+RUN USER=root cargo new --lib --vcs none admin-server
+WORKDIR /admin
+RUN mkdir -p /admin/server/
+
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./server/server.rs ./server/
+
+RUN cargo build --release
+
+FROM ubuntu@sha256:5f4bdc3467537cbbe563e80db2c3ec95d548a9145d64453b06939c4592d67b6d
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get -y install ca-certificates libssl-dev && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /admin
+RUN mkdir -p /admin/dist-client/
+
+COPY --from=server /admin/target/release/server .
+COPY --from=js /usr/src/dist-client/ ./
+
+EXPOSE 8000
+
+CMD ["./server"]

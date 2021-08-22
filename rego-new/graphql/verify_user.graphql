@@ -1,4 +1,4 @@
-mutation VerifyUser($uid: String!, $code: String!) {
+mutation VerifyUser($uid: ObjectId!, $code: String!) {
 	verifyUser(id: $uid, code: $code) {
 		emailVerified
 	}

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 build(){
-    wasm-pack build --target web --dev
+    wasm-pack build --target web --dev -- --features app
 }
 
 pack(){
@@ -13,7 +13,7 @@ minify(){
 }
 
 less(){
-	lessc less/main.less pkg/style.css
+	lessc less/main.less pkg/style.min.css
 }
 
 run(){

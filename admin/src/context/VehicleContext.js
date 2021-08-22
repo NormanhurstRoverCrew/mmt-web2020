@@ -11,6 +11,7 @@ const GET_VEHICLE = gql`
 		vehicles {
 			id
 			rego
+			name
 			driver {
 				id
 			}
@@ -24,6 +25,22 @@ const GET_VEHICLE = gql`
 	}
 `;
 
+const APPROVE_TICKET = gql`
+	mutation ApproveTicket($vehicle: ObjectId!, $ticket: ObjectId!) {
+		addTicketToVehicle(vehicle: $vehicle, ticket: $ticket) {
+			id
+		}
+	}
+`;
+
+const DENY_TICKET = gql`
+	mutation DenyTicket($vehicle: ObjectId!, $ticket: ObjectId!) {
+		removeTicketFromVehicle(vehicle: $vehicle, ticket: $ticket) {
+			id
+		}
+	}
+`;
+
 const VehicleContextProvider = ({children}) => {
 	const [vehicles, updateVehicles] = useState([]);
 
@@ -31,14 +48,36 @@ const VehicleContextProvider = ({children}) => {
 		GET_VEHICLE,
 	);
 
+	const [_approveTicket, {data: dataApproveTicket}] = useMutation(APPROVE_TICKET);
+	const [_denyTicket, {data: dataDenyTicket}] = useMutation(DENY_TICKET);
+
 	useEffect(() => {
 		if (vehiclesQueryData) {
 			updateVehicles(vehiclesQueryData.vehicles);
 		}
 	}, [vehiclesQueryData]);
 
+	const approveTicket = (vehicle, ticket) => {
+			_approveTicket({variables: {ticket, vehicle}});
+	};
+
+	const denyTicket = (vehicle, ticket) => {
+			_denyTicket({variables: {ticket, vehicle}});
+	};
+
+	const reloadData = () => {
+		refetchVehicles();
+	};
+
+	useEffect(() => {
+			reloadData();
+	}, [dataApproveTicket, dataDenyTicket]);
+
 	const obj = {
 		vehicles,
+		reloadData,
+		approveTicket,
+		denyTicket
 	};
 
 	return (

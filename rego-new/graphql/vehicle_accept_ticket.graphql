@@ -1,0 +1,5 @@
+mutation VehicleAcceptTicket($vehicle_id: ObjectId!, $ticket_id: ObjectId!) {
+	vehicleAcceptTicket(vehicle: $vehicle_id, ticket: $ticket_id) {
+		id
+	}
+}

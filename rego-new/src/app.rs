@@ -7,6 +7,7 @@ use crate::checkin::CheckIn;
 use crate::checkout::Checkout;
 use crate::confirm_email::ConfirmEmail;
 use crate::home::Home;
+use crate::manage_vehicle::ManageVehicle;
 use crate::new_booking_form::NewBookingForm;
 use crate::purchase_tickets::PurchaseTickets;
 
@@ -41,7 +42,8 @@ impl Component for App {
                             AppRoute::PurchaseTickets => html!{<PurchaseTickets />},
                             AppRoute::Register => html!{<NewBookingForm />},
                             AppRoute::Checkout => html!{<Checkout />},
-                            AppRoute::CheckIn{ticket_id} => html!{<CheckIn ticket_id = ticket_id />},
+                            AppRoute::CheckIn{user_id} => html!{<CheckIn user_id = user_id />},
+                            AppRoute::ManageVehicle{vehicle_id} => html!{<ManageVehicle vehicle_id = vehicle_id />},
                         }
                     })
                 />
@@ -63,8 +65,10 @@ pub enum AppRoute {
     PurchaseTickets,
     #[to = "/checkout"]
     Checkout,
-    #[to = "/checkin/{ticket_id}"]
-    CheckIn { ticket_id: String },
+    #[to = "/checkin/{user_id}"]
+    CheckIn { user_id: String },
+    #[to = "/manage_vehicle/{vehicle_id}"]
+    ManageVehicle { vehicle_id: String },
     #[to = "/"]
     Home,
 }

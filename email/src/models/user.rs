@@ -12,8 +12,10 @@ pub struct User {
     name: String,
     email: String,
     code: Option<String>,
+    email_verified: bool,
 }
 
+#[allow(unused)]
 impl User {
     pub fn id(&self) -> &ObjectId {
         &self.id
@@ -37,11 +39,12 @@ impl User {
             let code = rand::thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(16)
+                .map(|c| c as char)
                 .collect::<String>();
             let ret = code.clone();
 
             user.code = Some(code);
-            if user.update(&db).await.is_ok() {
+            if user.update(db).await.is_ok() {
                 ret
             } else {
                 String::from("")
@@ -49,5 +52,9 @@ impl User {
         } else {
             self.code.as_ref().unwrap().clone()
         }
+    }
+
+    pub fn verified(&self) -> bool {
+        self.email_verified
     }
 }

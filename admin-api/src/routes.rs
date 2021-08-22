@@ -7,7 +7,8 @@ use juniper::{
 use mongodb::Database;
 use std::sync::Arc;
 use stripe::Client;
-use tonic::transport::Endpoint;
+use mmt::email::email_client::EmailClient;
+use tonic::transport::Channel;
 
 pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<CustomContext>>;
 
@@ -22,7 +23,7 @@ pub async fn graphql(
 	schema : web::Data<Arc<Schema>>,
 	stripe : web::Data<Client>,
 	db : web::Data<Database>,
-	email : web::Data<Endpoint>,
+	email : web::Data<EmailClient<Channel>>,
 	data : web::Json<GraphQLRequest>,
 ) -> Result<HttpResponse, Error> {
 	let context = CustomContext {
@@ -30,10 +31,8 @@ pub async fn graphql(
 		stripe : stripe.into_inner(),
 		email :  email.into_inner(),
 	};
-
 	let res = data.execute(&schema, &context).await;
-	let res = serde_json::to_string(&res)?;
 	Ok(HttpResponse::Ok()
 		.content_type("application/json")
-		.body(res))
+        .json(res))
 }

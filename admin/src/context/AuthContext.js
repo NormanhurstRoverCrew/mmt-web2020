@@ -156,7 +156,7 @@ const AuthContextProvider = ({children}) => {
 			updateLogoutTimer(
 				setTimeout(() => {
 					logout();
-				}, 8000),
+				}, 3000),
 			);
 		}
 	}, [authenticated]);

@@ -1,15 +1,16 @@
+use stripe::Client;
 use crate::{
 	graphql::context::CustomContext,
 	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
 };
 use bson::{doc, oid::ObjectId};
 use juniper::{FieldError, FieldResult, ID};
-use mmt::{Create, Db, Update, DB};
+use mmt::{Create, Db, Update, DB, db::Delete};
 use mongodb::results::UpdateResult;
 use serde::{Deserialize, Serialize};
 use std::{error::Error, str::FromStr};
 use stripe::{
-	CreatePaymentIntent, Currency, PaymentIntent, PaymentIntentStatus, PaymentIntentUpdateParams,
+	CreatePaymentIntent, Currency, PaymentIntent, PaymentIntentId, PaymentIntentStatus, PaymentIntentUpdateParams,
 	PaymentMethod, PaymentMethodId,
 };
 
@@ -63,8 +64,13 @@ impl Booking {
 		booking_id
 	}
 
-	pub async fn delete(&self, _db : &CustomContext) -> bool {
-		todo!("implement Booking.delete()");
+	pub async fn delete_booking(&self, context : &CustomContext) -> bool {
+        for ticket in self.get_tickets(&context).await.iter() {
+            if let Err(e) = ticket.delete(&context.db).await {
+                return false;
+            }
+        }
+        self.delete(&context.db).await.is_ok()
 	}
 
 	pub async fn get_tickets(&self, context : &CustomContext) -> Vec<Ticket> {
@@ -88,9 +94,9 @@ impl Booking {
 		format!("{} x Magical Mystery Tour 2020 Ticket", n_tickets)
 	}
 
-	async fn stripe_price(&self, context : &CustomContext) -> u64 {
+	async fn stripe_price(&self, context : &CustomContext) -> i64 {
 		let n_tickets = self.get_tickets(context).await.len();
-		n_tickets as u64 * (TICKET_PRICE * 100.0) as u64
+		n_tickets as i64 * (TICKET_PRICE * 100.0) as i64
 	}
 
 	pub async fn create_stripe_payment_intent(
@@ -124,50 +130,9 @@ impl Booking {
 		pi
 	}
 
-	pub async fn add_stripe_payment_method(
-		&self,
-		context : &CustomContext,
-		pm_id : &str,
-		pi_id : &str,
-	) -> FieldResult<()> {
-		let pm_id = PaymentMethodId::from_str(pm_id).unwrap();
-
-		match PaymentMethod::retrieve(&context.stripe, &pm_id, &[]).await {
-			Ok(_pm) => {},
-			Err(_) => {
-				return Err(FieldError::new(
-					"Payment Method does not exist",
-					graphql_value!({"type":"STRIPE_ERROR"}),
-				));
-			},
-		};
-
-		let _ = PaymentIntent::update(
-			&context.stripe,
-			&pi_id,
-			PaymentIntentUpdateParams {
-				amount :                  Some(self.stripe_price(&context).await),
-				application_fee_amount :  None,
-				currency :                None,
-				customer :                None,
-				description :             Some(&self.payment_description(&context).await),
-				metadata :                None,
-				payment_method :          Some(&pm_id),
-				receipt_email :           None,
-				save_source_to_customer : None,
-				shipping :                None,
-				source :                  None,
-				transfer_group :          None,
-			},
-		)
-		.await;
-
-		Ok(())
-	}
-
 	pub async fn add_transaction(&mut self, context : &CustomContext, t : Transaction) {
 		self.payment.transactions.push(t);
-		self.commit(context).await.expect("DB Error");
+		self.update(&context.db).await.expect("DB Error");
 	}
 
 	pub async fn get_stripe_pi(&self, context : &CustomContext) -> Option<PaymentIntent> {
@@ -185,10 +150,13 @@ impl Booking {
 					None
 				}
 			})
-			.collect::<Vec<&String>>();
+            .filter_map(|t| {
+                PaymentIntentId::from_str(t).ok()
+            })
+			.collect::<Vec<PaymentIntentId>>();
 
 		for pi in pis {
-			let spi = PaymentIntent::retrieve(&context.stripe, &pi).await.ok()?;
+			let spi = PaymentIntent::retrieve(&context.stripe, &pi, &[]).await.ok()?;
 
 			match &spi.status {
 				PaymentIntentStatus::Succeeded | PaymentIntentStatus::Canceled => continue,
@@ -199,23 +167,24 @@ impl Booking {
 		None
 	}
 
-	pub async fn commit(&self, context : &CustomContext) -> Result<UpdateResult, Box<dyn Error>> {
-		let doc = bson::to_bson(&self)
-			.unwrap()
-			.as_document()
-			.unwrap()
-			.to_owned();
-		context
-			.bookings_handel()
-			.update_one(
-				doc! {
-						"_id" : &self.id,
-				},
-				doc,
-				None,
-			)
-			.await
-			.map_err(|e| e.into())
+	async fn price(&self, context : &CustomContext) -> f64 {
+		let n_tickets = self.get_tickets(context).await.len();
+		n_tickets as f64 * TICKET_PRICE
+	}
+
+	pub async fn amount_received(&self, client : &Client) -> f64 {
+		let mut sum = 0.0;
+		for t in self.payment.transactions.iter() {
+			sum += t.value(&client).await;
+		}
+
+		sum
+	}
+
+	pub async fn balence(&self, context : &CustomContext) -> f64 {
+		let (price, received) =
+			futures::join!(self.price(&context), self.amount_received(&context.stripe));
+		price - received
 	}
 }
 

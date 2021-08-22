@@ -21,6 +21,7 @@ use mongodb::{Client as Mongo, Database};
 use mutation_root::MutationRoot;
 use query_root::QueryRoot;
 use std::sync::Arc;
+use stripe::Client;
 
 mod auth;
 mod custom_context;
@@ -57,6 +58,9 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
     let db = client.database("mmt_development");
 
+    let stripe = std::env::var("STRIPE_API_KEY").expect("Stripe Api Key");
+    let stripe = Client::new(stripe);
+
     // Create Juniper schema
     let schema = std::sync::Arc::new(Schema::new(
         QueryRoot,
@@ -81,6 +85,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .data(schema.clone())
             .data(db.clone())
+            .data(stripe.clone())
             .service(web::resource("/graphql").route(web::post().to(graphql)))
             .service(web::resource("/graphiql").route(web::get().to(graphiql)))
     })
@@ -100,7 +105,7 @@ pub async fn graphiql() -> HttpResponse {
 
 pub async fn graphql(
     schema: web::Data<Arc<Schema>>,
-    // stripe: web::Data<Client>,
+    stripe: web::Data<Client>,
     db: web::Data<Database>,
     // email: web::Data<Endpoint>,
     data: web::Json<GraphQLRequest>,
@@ -109,11 +114,11 @@ pub async fn graphql(
     let context = CustomContext {
         db: db.into_inner(),
         admin_user,
+        stripe: stripe.into_inner(),
     };
 
     let res = data.execute(&schema, &context).await;
-    let res = serde_json::to_string(&res)?;
     Ok(HttpResponse::Ok()
         .content_type("application/json")
-        .body(res))
+        .json(res))
 }

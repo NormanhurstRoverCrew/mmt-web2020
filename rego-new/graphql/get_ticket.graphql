@@ -1,0 +1,15 @@
+query GetTicket($uid: ObjectId!) {
+	user(id: $uid) {
+		id
+		ticket {
+			id
+			user {
+				id
+				name
+				email
+				mobile
+				crew
+			}
+		}
+	}
+}

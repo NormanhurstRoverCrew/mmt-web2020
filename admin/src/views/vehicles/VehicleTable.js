@@ -24,8 +24,12 @@ export const VehicleTable = () => {
 							render: rowData => <div>{rowData.rego || "[NO REGO]"}</div>,
 						},
 						{
-							title: "Name",
+							title: "Team Name",
 							field: "name",
+							render: rowData => <div>{rowData.name || "[NO NAME]"}</div>,
+						},
+						{
+							title: "Driver Name",
 							render: rowData => { 
 									const ticket = _.find(tickets, (t) => t.id == rowData.driver.id );
 									const driverName = (ticket && ticket.user && ticket.user.name) || "[NO NAME]";

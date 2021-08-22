@@ -1,6 +1,6 @@
 use crate::{
 	graphql::context::CustomContext,
-	models::{Booking, Ticket, User, Vehicle, TICKET_PRICE},
+	models::{Booking, Ticket, User, Vehicle, TICKET_PRICE, STRIPE_RATE},
 };
 use bson::{doc, oid::ObjectId};
 use juniper::{graphql_value, FieldResult};
@@ -55,7 +55,24 @@ impl QueryRoot {
 		}
 	}
 
+	/// Get a ticket
+	async fn user(context : &CustomContext, id : ObjectId) -> FieldResult<User> {
+		match User::get(&context.db, &id).await {
+			Some(user) => Ok(user),
+			None => {
+				return Err(juniper::FieldError::new(
+					"User not found",
+					graphql_value!({
+						"type": "USER_NOT_FOUND"
+					}),
+				))
+			},
+		}
+	}
+
 	fn ticket_price() -> f64 { TICKET_PRICE }
+
+	fn stripe_rate() -> f64 { STRIPE_RATE }
 
 	/// If ticket is a driver, return the vehicle they own
 	async fn vehicle_from_ticket(
@@ -73,8 +90,29 @@ impl QueryRoot {
 		Ok(vehicle)
 	}
 
+	async fn vehicle(
+		context : &CustomContext,
+		vehicle_id : ObjectId,
+	) -> FieldResult<Vehicle> {
+		Vehicle::get(
+			&context.db,
+            &vehicle_id,
+		)
+		.await.ok_or(
+            juniper::FieldError::new(
+				"Vehicle not found",
+				graphql_value!({
+					"type": "VEHICLE_NOT_FOUND"
+				}),
+			)
+        )
+	}
+
 	/// If ticket is a driver, return the vehicle they own
 	async fn driver_name_from_rego(context : &CustomContext, rego : String) -> FieldResult<String> {
+        let mut rego = rego.to_uppercase();
+        rego.retain(|c|!c.is_whitespace());
+
 		let vehicle = match Vehicle::find_one(
 			&context.db,
 			doc! {
@@ -126,3 +164,5 @@ impl QueryRoot {
 		}
 	}
 }
+
+

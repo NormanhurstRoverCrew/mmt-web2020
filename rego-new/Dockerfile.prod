@@ -1,0 +1,104 @@
+# select build image
+FROM rust:1.52 as app
+
+# create a new empty shell project
+RUN USER=root cargo new --lib --vcs none rego
+WORKDIR /rego
+
+RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+# COPY rego-new/Cargo.lock ./Cargo.lock
+COPY rego-new/Cargo.toml ./Cargo.toml
+
+RUN echo "" > dummy.rs
+RUN sed -i 's#src/lib.rs#dummy.rs#' Cargo.toml
+# RUN cargo build --release
+
+RUN wasm-pack build --target web --release -- --features app
+
+RUN sed -i 's#dummy.rs#src/lib.rs#' Cargo.toml
+
+RUN rm ./src/lib.rs
+
+# copy your source tree
+COPY rego-new/pkg ./pkg
+COPY rego-new/src ./src
+COPY rego-new/*.graphql .
+COPY rego-new/schema.json .
+
+ENV STRIPE_CLIENT_KEY=pk_live_WUTyDVeXwKzzYY3T4g4I5k0X001tA9MbJu
+
+RUN wasm-pack build --target web --release -- --features app
+
+###############################################################
+# bundle js
+FROM node as rollup
+WORKDIR rego
+RUN npm install --global rollup
+
+RUN mkdir -p ./pkg/
+
+COPY --from=app /rego/pkg/rego.js ./pkg/
+COPY rego-new/main.js .
+
+RUN rollup ./main.js --format iife --file ./pkg/bundle.js
+
+###############################################################
+# build css
+FROM finalgene/lessc as less
+WORKDIR /rego
+COPY rego-new/less/ .
+RUN lessc main.less style.css
+
+###############################################################
+# minify js and css
+FROM tdewolff/minify as minify
+WORKDIR /rego/pkg
+
+COPY --from=rollup /rego/pkg/bundle.js .
+COPY --from=less /rego/style.css .
+
+RUN minify -o bundle.min.js bundle.js
+RUN minify -o style.min.css style.css
+
+###############################################################
+# build server
+FROM rustlang/rust:nightly as server
+RUN USER=root cargo new --lib --vcs none rego
+WORKDIR /rego
+
+# COPY rego-new/Cargo.lock ./Cargo.lock
+COPY rego-new/Cargo.toml ./Cargo.toml
+
+RUN echo "fn main() {}" > dummy.rs
+RUN sed -i 's#src/server.rs#dummy.rs#' Cargo.toml
+
+RUN cargo build --bin server --no-default-features --features server --release
+
+RUN sed -i 's#dummy.rs#src/server.rs#' Cargo.toml
+
+COPY rego-new/src ./src
+
+RUN cargo build --bin server --no-default-features --features server --release
+
+##################################################################
+# our final base
+#FROM alpine
+FROM ubuntu@sha256:5f4bdc3467537cbbe563e80db2c3ec95d548a9145d64453b06939c4592d67b6d
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get -y install ca-certificates libssl-dev && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /rego
+RUN mkdir -p pkg
+
+COPY --from=server /rego/target/release/server /rego
+COPY --from=app /rego/pkg/index.html /rego/pkg
+COPY --from=minify /rego/pkg/style.min.css /rego/pkg
+COPY --from=app /rego/pkg/rego_bg.wasm /rego/pkg
+COPY --from=minify /rego/pkg/bundle.min.js /rego/pkg
+
+EXPOSE 8000
+
+# set the startup command to run your binary
+CMD ["./server"]

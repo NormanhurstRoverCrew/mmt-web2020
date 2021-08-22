@@ -1,0 +1,18 @@
+{% extends "email.html" %}
+
+{% block head %}
+  <style>
+  </style>
+{% endblock %}
+
+{% block content %}
+	<p>
+		Hello {{ name }},
+	</p>
+	<p>
+		{{ msg_short }}
+	</p>
+	<p>
+		{{ msg_long }}
+	</p>
+{% endblock %}

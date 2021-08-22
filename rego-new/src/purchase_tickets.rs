@@ -16,8 +16,8 @@ use yew_router::{
 
 #[derive(GraphQLQuery)]
 #[graphql(
-    schema_path = "schema.json",
-    query_path = "update_booking_tickets.graphql",
+    schema_path = "graphql/schema.json",
+    query_path = "graphql/update_booking_tickets.graphql",
     response_derives = "Debug, Serialize, Clone, Default"
 )]
 struct UpdateBookingTickets;
@@ -25,6 +25,7 @@ struct UpdateBookingTickets;
 impl From<update_booking_tickets::UpdateBookingTicketsUpdateBookingTickets> for Booking {
     fn from(b: update_booking_tickets::UpdateBookingTicketsUpdateBookingTickets) -> Self {
         let id = b.id;
+        let index = b.no;
         let tickets: Vec<Ticket> = b.tickets.into_iter().map(|t| t.into()).collect();
         let user_id = b.user.id;
         let user = tickets
@@ -32,7 +33,12 @@ impl From<update_booking_tickets::UpdateBookingTicketsUpdateBookingTickets> for 
             .find(|t| &t.user.id == &user_id)
             .map(|t| t.user.clone())
             .unwrap();
-        Self { id, user, tickets }
+        Self {
+            id,
+            user,
+            tickets,
+            index,
+        }
     }
 }
 
@@ -220,8 +226,17 @@ impl Component for PurchaseTickets {
                     })
                 };
 
+                let select = |ticket: Rc<Ticket>, f: Box<dyn Fn(&mut User, ChangeData)>| {
+                    self.link.callback(move |input: ChangeData| {
+                        let mut ticket = ticket.clone();
+                        let ticket = Rc::make_mut(&mut ticket);
+                        f(&mut ticket.user, input);
+                        Msg::UpdateTicket(idx, ticket.clone())
+                    })
+                };
+
                 Some(html! {
-                    <div class="form mui-container-fluid">
+                    <div class="form mui-container-fluid editable">
                         <div class="ticket-header">
                             <div class="mui--text-title">{"Ticket "}{idx+1}</div>
                             <button type="button" class="mui-btn mui-btn--raised mui-btn--danger" onclick=self.link.callback(move |_| Msg::RemoveTicket(idx))>{"Remove"}</button>
@@ -229,23 +244,29 @@ impl Component for PurchaseTickets {
                         <div class="mui-textfield mui-textfield--float-label">
                             <input type="text" autocomplete="name" required=true value=name.clone() oninput=input(ticket.clone(), Box::new(|mut user, input| user.name = input.value)) />
                             <label>{"Name"}</label>
-                            <p class="mui--text-caption">{"Full Name"}</p>
+                            <p class="mui--text-caption">{"eg. Ru Paul"}</p>
                         </div>
                         <div class="mui-textfield mui-textfield--float-label">
                             <input type="email" autocomplete="email" required=true value=email.clone() oninput=input(ticket.clone(), Box::new(|mut user, input| user.email = input.value)) />
                             <label>{"Email"}</label>
-                            <p class="mui--text-caption">{"example@gmail.com"}</p>
+                            <p class="mui--text-caption">{"eg. example@gmail.com"}</p>
                         </div>
                         <div class="mui-textfield mui-textfield--float-label">
                             <input type="text" autocomplete="phone" required=true value=mobile.clone() oninput=input(ticket.clone(), Box::new(|mut user, input| user.mobile = input.value)) />
                             <label>{"Mobile"}</label>
-                            <p class="mui--text-caption">{"0400 000 000"}</p>
+                            <p class="mui--text-caption">{"eg. 0400 000 000"}</p>
                         </div>
-                        <div class="mui-textfield mui-textfield--float-label">
-                            <input type="text" autocomplete="crew" required=false value=crew.clone() oninput=input(ticket.clone(), Box::new(|mut user, input| user.crew = input.value)) />
-                            <label>{""}</label>
-                            <p class="mui--text-caption">{"Normanhurst Rover Crew"}</p>
+
+                        <div class="mui-select mui-select--float-label">
+                            // <input type="text" name="crew" required=true value=self.crew.clone() oninput=self.link.callback(|e: InputData| Msg::SetCrew(e.value)) />
+                            <select value=crew.clone() onchange=select(ticket.clone(), Box::new(|mut user, input| if let ChangeData::Select(sel) = input {
+                                user.crew = sel.value()
+                                })) >
+                                {crate::crews::crews_option()}
+                            </select>
+                            <label>{"Crew"}</label>
                         </div>
+
                     </div>
                 })
             } else {

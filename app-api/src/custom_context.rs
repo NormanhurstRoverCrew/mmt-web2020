@@ -1,17 +1,21 @@
 use bson::doc;
 use mongodb::Database;
+use serde::Deserialize;
+use serde::Serialize;
 use std::sync::Arc;
+use stripe::Client;
 
 use crate::models::admin_user::AdminUser;
 
 pub struct CustomContext {
     pub db: Arc<Database>,
     pub admin_user: AdminUser,
+    pub stripe: Arc<Client>,
 }
 
 impl CustomContext {
     pub async fn index(&self, i: &str) -> i32 {
-        let indexes = self.db.collection("indexes");
+        let indexes = self.db.collection::<Index>("indexes");
         loop {
             match indexes
                 .find_one_and_update(
@@ -28,14 +32,14 @@ impl CustomContext {
                 .await
             {
                 Ok(Some(doc)) => {
-                    return doc.get_i32("seq").expect("Sequence Number");
+                    return doc.seq;
                 }
                 _ => {
                     indexes
                         .insert_one(
-                            doc! {
-                                    "name" :i,
-                                    "seq" :1,
+                            Index {
+                                name: i.to_owned(),
+                                seq: 1,
                             },
                             None,
                         )
@@ -48,3 +52,9 @@ impl CustomContext {
 }
 
 impl juniper::Context for CustomContext {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Index {
+    name: String,
+    seq: i32,
+}

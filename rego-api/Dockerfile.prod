@@ -1,27 +1,34 @@
 # select build image
-FROM rustlang/rust:nightly as build
+FROM rust:1.52 as build
 
 # create a new empty shell project
 RUN USER=root cargo new --bin --vcs none rego-api
 WORKDIR /rego-api
 
-# copy over your manifests
 COPY rego-api/Cargo.lock ./Cargo.lock
 COPY rego-api/Cargo.toml ./Cargo.toml
-COPY ./proto ./proto
+COPY ./proto ../proto
 COPY ./mmt ../mmt
 COPY ./mmt-db ../mmt-db
 COPY ./mmt-derive ../mmt-derive
 
-# this build step will cache your dependencies
+RUN echo "fn main() {}" > dummy.rs
+RUN echo "fn main() {}" > dummylib.rs
+RUN sed -i 's#src/bin/main.rs#dummy.rs#' Cargo.toml
+RUN sed -i 's#src/lib.rs#dummylib.rs#' Cargo.toml
 RUN cargo build --release
-RUN rm src/*.rs
+RUN sed -i 's#dummy.rs#src/bin/main.rs#' Cargo.toml
+RUN sed -i 's#dummylib.rs#src/lib.rs#' Cargo.toml
+
+# this build step will cache your dependencies
+# RUN cargo build --release
+# RUN rm src/*.rs
 
 # copy your source tree
 COPY rego-api/src ./src
 
 # build for release
-RUN rm /rego-api/target/release/deps/rego-api*
+RUN rm /rego-api/target/release/rego-api*
 RUN cargo build --release
 
 # our final base
@@ -35,7 +42,9 @@ WORKDIR /rego-api
 
 # copy the build artifact from the build stage
 COPY --from=build /rego-api/target/release/rego-api ./rego-api
-COPY ./Rocket.toml ./Rocket.toml
+# COPY ./Rocket.toml ./Rocket.toml
+#
+EXPOSE 8082
 
 # set the startup command to run your binary
-# CMD ["./rego-api"]
+CMD ["./rego-api"]

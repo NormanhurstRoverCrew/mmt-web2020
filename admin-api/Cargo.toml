@@ -10,23 +10,25 @@ name = "libmmtapi"
 
 [[bin]]
 path = "src/bin/main.rs"
-name = "mmtapi"
+name = "admin-api"
 
 [dependencies]
 mmt = { path = "../mmt" }
 # rocket = { version = "0.4", default-features = false }
 # rocket_contrib = { version = "0.4", default-features = false, features = ["json", "mongodb_pool"] }
-mongodb = "1.0"
-bson = "1"
+mongodb = "=2.0.0-beta"
+bson = "=2.0.0-beta"
 #juniper = "0.14.2"
 futures = "0.3.1"
 # juniper= { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
 # juniper= { git="https://github.com/graphql-rust/juniper.git", rev="84c9720b535c37dfc1d8bc6b142bf2f63e5fd166" }
-juniper = "0.15.0"
+# juniper = "0.15.0"
+juniper = { git = "https://github.com/grantperry/juniper.git", branch = "bson2" }
 # juniper_rocket = "0.5.0"
 # juniper_rocket = { git="https://github.com/graphql-rust/juniper.git", rev="7e8724751f1264215068d66c91cc384884142caf" }
 # rocket_cors = "0.5.2"
-stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async", "default-tls", "events"], git = "https://github.com/grantperry/stripe-rs.git", branch = "payment-intent-update-payment-method" }
+# stripe-rust = { version = "0.12.1", default-features = false, features = ["full", "async", "default-tls", "events"], git = "https://github.com/grantperry/stripe-rs.git", branch = "payment-intent-update-payment-method" }
+async-stripe = { version = "0.13.0-rc3", default-features = false, features = ["runtime-tokio-hyper", "webhook-events", "checkout", "billing"] }
 rand = "0.7"
 lettre = { git = "https://github.com/lettre/lettre" }
 email = { version = "^0.0.20" }
@@ -41,12 +43,13 @@ chrono = { version = "0.4", features = ["serde"] }
 
 reqwest = { version = "0.10", features = ["json", "blocking"] }
 
-actix-web = "2.0.0"
+actix-web = "4.0.0-beta.6"
 actix-web-httpauth = { git = "https://github.com/actix/actix-web-httpauth" }
-actix-cors = "0.2"
-actix-service = "1.0.1"
+# actix-cors = "0.6.0-beta.1"
+actix-cors = { git = "https://github.com/near/actix-extras.git", branch = "actix-web-4-beta.6" }
+actix-service = "2.0.0"
 alcoholic_jwt = "1.0.0"
-actix-rt = "1.0.0"
+actix-rt = "2.2"
 env_logger = "0.7.1"
 async-trait = "0.1"
-tonic = "0.3"
+tonic = "0.4"

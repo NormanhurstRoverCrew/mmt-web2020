@@ -74,7 +74,7 @@ module.exports = {
 	},
 	plugins: [
 		new HtmlWebPackPlugin({
-			template: "./client/index.html",
+			template: "./src/index.html",
 			filename: "./index.html"
 		}),
 		new DefinePlugin({
@@ -83,7 +83,7 @@ module.exports = {
 	],
 	resolve: {
 		modules: [
-			path.resolve('./client'),
+			path.resolve('./src'),
 			path.resolve('./node_modules')
 		]
 	},

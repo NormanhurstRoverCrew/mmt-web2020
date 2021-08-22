@@ -6,8 +6,8 @@ use yew::services::ConsoleService;
 
 #[derive(GraphQLQuery)]
 #[graphql(
-    schema_path = "schema.json",
-    query_path = "new_user.graphql",
+    schema_path = "graphql/schema.json",
+    query_path = "graphql/new_user.graphql",
     response_derives = "Debug"
 )]
 struct NewUser;
@@ -20,16 +20,19 @@ pub struct NewBookingForm {
     crew: String,
     loading: bool,
     check_email: bool,
+
+    errors: Vec<String>,
 }
 
 pub enum Msg {
     SetName(String),
     SetEmail(String),
     SetMobile(String),
-    SetCrew(String),
     SubmitBooking,
     SetLoading(bool),
     CheckEmail,
+    CrewChange(ChangeData),
+    SetErrors(Vec<String>),
 }
 
 impl Component for NewBookingForm {
@@ -45,6 +48,7 @@ impl Component for NewBookingForm {
             crew: String::new(),
             loading: false,
             check_email: false,
+            errors: vec![],
         }
     }
 
@@ -53,7 +57,6 @@ impl Component for NewBookingForm {
             Msg::SetName(name) => self.name = name,
             Msg::SetEmail(email) => self.email = email,
             Msg::SetMobile(mobile) => self.mobile = mobile,
-            Msg::SetCrew(crew) => self.crew = crew,
             Msg::SetLoading(loading) => self.loading = loading,
             Msg::CheckEmail => self.check_email = true,
             Msg::SubmitBooking => {
@@ -92,6 +95,28 @@ impl Component for NewBookingForm {
 
                     if let Some(errors) = response.errors {
                         ConsoleService::log(&format!("Resp errors {:?}", errors));
+                        if let Some(error) = errors.first() {
+                            if let Some(ext) = &error.extensions {
+                                if let Some(serde_json::Value::String(s)) = ext.get("type") {
+                                    if s == "FIELD_VALIDATION" {
+                                        ConsoleService::log(&format!("{:?}", ext["advice"]));
+                                        if let Some(advice) = ext["advice"].as_array() {
+                                            link.send_message(Msg::SetErrors(
+                                                advice
+                                                    .iter()
+                                                    .map(|adv| {
+                                                        format!(
+                                                            "{} {}",
+                                                            adv["field"], adv["advice"]
+                                                        )
+                                                    })
+                                                    .collect(),
+                                            ))
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     } else if let Some(data) = response.data {
                         ConsoleService::log(&format!("Resp data {:?}", data));
                         link.send_message(Msg::CheckEmail);
@@ -100,6 +125,12 @@ impl Component for NewBookingForm {
 
                 return false;
             }
+            Msg::CrewChange(data) => {
+                if let ChangeData::Select(sel) = data {
+                    self.crew = sel.value();
+                }
+            }
+            Msg::SetErrors(errs) => self.errors = errs,
         }
         true
     }
@@ -110,6 +141,13 @@ impl Component for NewBookingForm {
 
     fn view(&self) -> Html {
         if !self.check_email {
+            let errors: Vec<Html> = self.errors.iter().map(|e| html! { <p>{e}</p> }).collect();
+            let error_msg = if !errors.is_empty() {
+                "Please fix all errors before trying again. If have more trouble please contact admin"
+            } else {
+                ""
+            };
+
             html! {
                 <div class="form" id="new-booking-form">
                     <h1 class="title">{"Register"}</h1>
@@ -122,14 +160,23 @@ impl Component for NewBookingForm {
                         <div class="mui-textfield mui-textfield--float-label">
                             <input type="text" name="email" required=true value=self.email.clone() oninput=self.link.callback(|e: InputData| Msg::SetEmail(e.value)) />
                             <label>{"Email"}</label>
+                            <p class="mui--text-caption">{"Please don't use @hotmail... @yahoo... or @live... You will never receive our emails"}</p>
                         </div>
                         <div class="mui-textfield mui-textfield--float-label">
                             <input type="text" name="mobile" required=true value=self.mobile.clone() oninput=self.link.callback(|e: InputData| Msg::SetMobile(e.value)) />
                             <label>{"Mobile"}</label>
+                            <p class="mui--text-caption">{"For emergency contact purposes on the day as well as COVID19 tracing."}</p>
                         </div>
-                        <div class="mui-textfield mui-textfield--float-label">
-                            <input type="text" name="crew" required=true value=self.crew.clone() oninput=self.link.callback(|e: InputData| Msg::SetCrew(e.value)) />
+                        <div class="mui-select mui-select--float-label">
+                            <select onchange=self.link.callback(|e: ChangeData| Msg::CrewChange(e)) >
+                                <option value="" disabled=true selected=true hidden=true>{"Select a crew"}</option>
+                                {crate::crews::crews_option()}
+                            </select>
                             <label>{"Crew"}</label>
+                        </div>
+                        <div class="errors">
+                            {errors}
+                            <div id="msg">{error_msg}</div>
                         </div>
                         <div class="button">
                             <button type="button" onclick=self.link.callback(|_| Msg::SubmitBooking)>{if self.loading {"Please wait..."} else {"Submit Booking"} }</button>
@@ -142,7 +189,8 @@ impl Component for NewBookingForm {
                 <div id="new-booking-form">
                     <h1 class="title">{"Please Confirm"}</h1>
                     <h2>{format!("Hello {}, Please confirm your email", &self.name)}</h2>
-                    <p>{"Thanks for registering. We’ve sent you an email from "}<b>{"bookings@normorovers.com"}</b>{" to "}{&self.email}{". Please click on the link in your email to finalise your tickets."}</p>
+                    <p>{"Thanks for registering. We’ve sent you an email from "}<b>{"bookings@normorovers.com"}</b>{" to "}{&self.email}{". Please click on the link in your email to verify your email and purchase your ticket/s."}</p>
+                    <p>{"You will be able to purchase multiple tickets for other Queens/Kings at this stage"}</p>
                 </div>
             }
         }

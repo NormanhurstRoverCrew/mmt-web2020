@@ -3,10 +3,11 @@ use crate::{
 	models::{Booking, NewVehicle, Ticket, TicketUpdate, Transaction, Vehicle},
 	wire::TransactionInput,
 };
+use futures::future::join;
 use bson::{doc, oid::ObjectId, Bson, Document};
 use futures::{stream::FuturesUnordered, StreamExt};
 use juniper::{graphql_value, FieldError, FieldResult};
-use mmt::{Create, Db, Update};
+use mmt::{Create, Db, Update, email::Booking as EmailBooking};
 use std::iter::Iterator;
 
 pub struct MutationRoot;
@@ -77,10 +78,10 @@ impl MutationRoot {
 	}
 
 	async fn update_ticket(context : &CustomContext, ticket : TicketUpdate) -> FieldResult<Ticket> {
-		match Ticket::get(&context.db, &ticket.id).await {
+		match dbg!(Ticket::get(&context.db, &ticket.id).await) {
 			Some(t) => {
 				let user : Bson = bson::to_bson(&ticket.user).unwrap();
-
+                dbg!(&user);
 				&context.users_handel().update_one(
 					doc! {
 						"_id" : t.get_user_id(),
@@ -102,13 +103,8 @@ impl MutationRoot {
 
 	async fn delete_tickets(
 		context : &CustomContext,
-		ticket_ids : Vec<String>,
+		ticket_ids : Vec<ObjectId>,
 	) -> FieldResult<f64> {
-		let ticket_ids = ticket_ids
-			.iter()
-			.filter_map(|id| string_to_id(id).ok())
-			.collect::<Vec<ObjectId>>();
-
 		context
 			.tickets_handel()
 			.delete_many(
@@ -129,46 +125,10 @@ impl MutationRoot {
 			})
 	}
 
-	async fn addTransaction(
-		context : &CustomContext,
-		booking_id : String,
-		transaction : TransactionInput,
-	) -> FieldResult<bool> {
-		let transaction : Transaction = transaction.into();
-		// if context.auth.permissions.payments_add {
-		let transaction : Bson = bson::to_bson(&transaction).unwrap();
-		context
-			.bookings_handel()
-			.update_one(
-				doc! {"_id": string_to_id(&booking_id).unwrap()},
-				doc! {
-				"$push" : {
-					"payment.transactions" : transaction,
-				}
-				},
-				None,
-			)
-			.await
-			.map_or_else(
-				|_| {
-					Err(FieldError::new(
-						"Could not add Tickets to DB",
-						graphql_value!({"type":"DB_ERROR"}),
-					))
-				},
-				|_| Ok(true),
-			)
-		// } else {
-		// 	Err(FieldError::new(
-		// 		"Not Authorized to create transactions",
-		// 		graphql_value!({"type":"UNAUTHORIZED_PAYMENTS_ADD"}),
-		// 	))
-		// }
-	}
 
-	async fn delete_booking(context : &CustomContext, booking_id : String) -> FieldResult<bool> {
-		match Booking::get(&context.db, &string_to_id(&booking_id).expect("ObjectID")).await {
-			Some(b) => Ok(b.delete(&context).await),
+	async fn delete_booking(context : &CustomContext, booking_id : ObjectId) -> FieldResult<bool> {
+		match Booking::get(&context.db, &booking_id).await {
+			Some(b) => Ok(b.delete_booking(&context).await),
 			None => Err(FieldError::new(
 				"Booking not found",
 				graphql_value!({"type":"BOOKING_NOT_FOUND"}),
@@ -276,4 +236,42 @@ impl MutationRoot {
 			)),
 		}
 	}
+
+	async fn remove_ticket_from_vehicle(
+		context : &CustomContext,
+		vehicle : ObjectId,
+		ticket : ObjectId,
+	) -> FieldResult<Vehicle> {
+		// Get Vehicle and Ticket at the same time from mongo...
+		// If there is an error then exit
+		let (mut vehicle, ticket) = match join(
+			Vehicle::get(&context.db, &vehicle),
+			Ticket::get(&context.db, &ticket),
+		)
+		.await
+		{
+			(Some(v), Some(t)) => (v, t),
+			_ => {
+				return Err(FieldError::new(
+					"Vehicle and/or Ticket does not exist",
+					graphql_value!({"type":"DB_ERROR"}),
+				))
+			},
+		};
+
+        // Remove only the ticket id specified
+        vehicle.requested_tickets.retain(|t| t != &ticket.id);
+
+		// write out both operations simultaneously
+		vehicle.update(&context.db)
+			.await
+			.map_err(|_| {
+				FieldError::new(
+					"Booking not found",
+					graphql_value!({"type":"BOOKING_NOT_FOUND"}),
+				)
+			})?;
+
+        Ok(vehicle)
+}
 }

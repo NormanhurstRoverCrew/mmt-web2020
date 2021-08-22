@@ -26,8 +26,10 @@ async fn main() -> Result<(), std::io::Error> {
 		if let Ok(email) = Endpoint::from_static("http://email:50051").connect().await {
 			break email;
 		}
-		std::thread::sleep(std::time::Duration::from_secs(1));
+        eprintln!("Could not connect to Email API");
+		std::thread::sleep(std::time::Duration::from_secs(10));
 	};
+
 	let rpc_email = EmailClient::new(grpc_email.clone());
 
 	// Create Juniper schema
@@ -37,6 +39,7 @@ async fn main() -> Result<(), std::io::Error> {
 		EmptySubscription::<CustomContext>::new(),
 	));
 
+    dbg!();
 	// Start http server
 	HttpServer::new(move || {
 		let cors = Cors::default()
@@ -59,7 +62,7 @@ async fn main() -> Result<(), std::io::Error> {
 			.service(web::resource("/graphiql").route(web::get().to(graphiql)))
 			.service(web::resource("/stripe/hooks").route(web::post().to(stripe_hook)))
 	})
-	.bind("0.0.0.0:8000")?
+	.bind("0.0.0.0:8082")?
 	.run()
 	.await
 }

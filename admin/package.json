@@ -14,7 +14,7 @@
 		"test-only": "mocha --require @babel/register --require ignore-styles --require ./tests/client/setup.js --recursive tests/",
 		"test": "nyc --reporter=html -x tests/ npm run test-only",
 		"check-coverage": "nyc check-coverage --lines 100",
-		"build": "webpack --config webpack.prod.js --mode production --colors && babel -d ./dist-server/ ./server/ ",
+		"build": "webpack --config webpack.prod.js --mode production --colors",
 		"start": "webpack-dev-server --config webpack.dev.js --hot --host 0.0.0.0 --mode development",
 		"prod": "node dist-server/server.js",
 		"dev": "webpack-dev-server --config webpack.dev.js --hot --host 0.0.0.0 --mode development --port 8081"
@@ -48,16 +48,17 @@
 		"sass-loader": "^7.3.1",
 		"style-loader": "^0.23.1",
 		"underscore": "^1.9.1",
+		"url-parse": "^1.4.7",
 		"webpack-merge": "^4.2.2"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.10.0",
 		"@babel/core": "^7.10.0",
 		"@babel/node": "^7.10.0",
+		"@babel/plugin-proposal-class-properties": "^7.10.0",
 		"@babel/preset-env": "^7.10.0",
 		"@babel/preset-react": "^7.10.0",
 		"@babel/register": "^7.10.0",
-		"@babel/plugin-proposal-class-properties": "^7.10.0",
 		"babel-eslint": "^10.0.3",
 		"babel-loader": "^8.0.6",
 		"babel-plugin-istanbul": "^5.2.0",

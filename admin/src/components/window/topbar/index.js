@@ -16,11 +16,13 @@ import {windowActions} from 'actions/window.actions';
 import {liveUpdateActions} from 'actions/liveUpdate.actions';
 import {Menu, MenuItem, FormControlLabel, Switch} from '@material-ui/core';
 import {BookingContext} from 'context/BookingContext';
+import {VehicleContext} from 'context/VehicleContext';
 
 const drawerWidth = 240;
 
 export const Topbar = ({classes, sideBarOpen, toggleSideBar}) => {
-	const {reloadData} = useContext(BookingContext);
+	const {reloadData: reloadBookingData} = useContext(BookingContext);
+	const {reloadData: reloadVehicleData} = useContext(VehicleContext);
 	const [anchorEl, updateAnchorEl] = useState(null);
 
 	const handleClick = e => {
@@ -74,10 +76,11 @@ export const Topbar = ({classes, sideBarOpen, toggleSideBar}) => {
 						variant="h6"
 						color="inherit"
 						className={classNames(classes.title)}>
-						MMT2020 Admin
+						MMT2021 Admin
 					</Typography>
 					<IconButton color="inherit" onClick={() => {
-							reloadData();
+							reloadBookingData();
+							reloadVehicleData();
 					}}>
 						<UpdateIcon />
 					</IconButton>

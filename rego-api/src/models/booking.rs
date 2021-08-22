@@ -1,16 +1,15 @@
 use crate::{
 	graphql::context::CustomContext,
-	models::{Payment, Ticket, Transaction, User, TICKET_PRICE},
+	models::{Payment, Ticket, Transaction, User, TICKET_PRICE, STRIPE_RATE},
 };
 use bson::{doc, oid::ObjectId};
 use juniper::{FieldError, FieldResult, ID};
 use mmt::{Create, Db, Update, DB};
-use mongodb::results::UpdateResult;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use stripe::{
-	CreatePaymentIntent, Currency, PaymentIntent, PaymentIntentStatus, PaymentIntentUpdateParams,
-	PaymentMethod, PaymentMethodId,UpdatePaymentIntent 
+	Client, CreatePaymentIntent, Currency, PaymentIntent, PaymentIntentStatus,
+	 PaymentMethod, PaymentMethodId, UpdatePaymentIntent,
 };
 
 #[DB(bookings)]
@@ -20,9 +19,6 @@ pub struct Booking {
 	pub id :  ObjectId,
 	user_id : ObjectId,
 	pub no :  i32,
-
-	#[serde(skip)]
-	pub tickets : Vec<Ticket>,
 
 	pub payment : Payment,
 }
@@ -36,7 +32,6 @@ impl Default for Booking {
 			id :      ObjectId::new(),
 			user_id : ObjectId::new(),
 			no :      999999,
-			tickets : vec![],
 			payment : Payment::default(),
 		}
 	}
@@ -84,21 +79,30 @@ impl Booking {
 		format!("{} x Magical Mystery Tour 2020 Ticket", n_tickets)
 	}
 
-	async fn stripe_price(&self, context : &CustomContext) -> i64 {
+	async fn price(&self, context : &CustomContext) -> f64 {
 		let n_tickets = self.get_tickets(context).await.len();
-		n_tickets as i64 * (TICKET_PRICE * 100.0) as i64
+		n_tickets as f64 * TICKET_PRICE
 	}
 
 	pub async fn create_stripe_payment_intent(
 		&mut self,
 		context : &CustomContext,
 	) -> Option<PaymentIntent> {
-        dbg!();
 		let user = self.get_user(&context).await;
 
-        dbg!();
-		let mut cpi = CreatePaymentIntent::new(self.stripe_price(&context).await, Currency::AUD);
-        dbg!();
+        let balence = self.balence(&context).await;
+
+        if balence < 0.01 {
+            eprintln!("Balence 0");
+            return None;
+        }
+
+        // Stripe Fee offset
+        let price = (balence + 0.30) / (1.0 - STRIPE_RATE);
+        let price = (price * 100.0) as i64;
+
+		let mut cpi =
+			CreatePaymentIntent::new(price, Currency::AUD);
 
 		cpi.metadata = Some(
 			[("booking_id".to_string(), self.id.to_string())]
@@ -107,24 +111,17 @@ impl Booking {
 				.collect(),
 		);
 
+		let pd = self.payment_description(&context).await;
+		cpi.description = Some(&pd);
 		cpi.receipt_email = Some(&user.email);
 
-        dbg!();
-		let pd = self.payment_description(&context).await;
-        dbg!();
-		cpi.description = Some(&pd);
-
-        dbg!();
 		let pi = PaymentIntent::create(&context.stripe, cpi).await.ok();
-        dbg!();
 
 		let id = pi.clone().map(|cpi| cpi.id.as_str().to_string())?;
 		// self.update_stripe_payment_intent(&context, &id).await;
 
-        dbg!();
 		self.add_transaction(&context, Transaction::stripe(id))
 			.await;
-        dbg!();
 
 		pi
 	}
@@ -151,24 +148,24 @@ impl Booking {
 			&context.stripe,
 			&pi_id.parse().unwrap(),
 			UpdatePaymentIntent {
-				amount :                  Some(self.stripe_price(&context).await ),
-				application_fee_amount :  None,
-				currency :                None,
-				customer :                None,
-				description :             Some(&self.payment_description(&context).await),
-				metadata :                None,
-				payment_method :          Some(pm_id),
-                payment_method_data: None,
-                payment_method_options: None,
-                payment_method_types: None,
-                receipt_email: None,
-				shipping :                None,
-				transfer_group :          None,
-                setup_future_usage:None,
-                statement_descriptor:None,
-                statement_descriptor_suffix:None,
-                transfer_data:None,
-                expand:&[],
+				amount : Some((self.price(&context).await / 100.0) as i64),
+				application_fee_amount : None,
+				currency : None,
+				customer : None,
+				description : Some(&self.payment_description(&context).await),
+				metadata : None,
+				payment_method : Some(pm_id),
+				payment_method_data : None,
+				payment_method_options : None,
+				payment_method_types : None,
+				receipt_email : None,
+				shipping : None,
+				transfer_group : None,
+				setup_future_usage : None,
+				statement_descriptor : None,
+				statement_descriptor_suffix : None,
+				transfer_data : None,
+				expand : &[],
 			},
 		)
 		.await;
@@ -178,7 +175,7 @@ impl Booking {
 
 	pub async fn add_transaction(&mut self, context : &CustomContext, t : Transaction) {
 		self.payment.transactions.push(t);
-		if let Ok(_) = self.update(&context.db).await {};
+		if let Ok(_) = dbg!(self.update(&context.db).await) {};
 	}
 
 	pub async fn get_stripe_pi(&self, context : &CustomContext) -> Option<PaymentIntent> {
@@ -199,7 +196,9 @@ impl Booking {
 			.collect::<Vec<&String>>();
 
 		for pi in pis {
-			let spi = PaymentIntent::retrieve(&context.stripe, &pi.parse().unwrap(),&[]).await.ok()?;
+			let spi = PaymentIntent::retrieve(&context.stripe, &pi.parse().unwrap(), &[])
+				.await
+				.ok()?;
 
 			match &spi.status {
 				PaymentIntentStatus::Succeeded | PaymentIntentStatus::Canceled => continue,
@@ -208,6 +207,21 @@ impl Booking {
 		}
 
 		None
+	}
+
+	pub async fn amount_received(&self, client : &Client) -> f64 {
+		let mut sum = 0.0;
+		for t in self.payment.transactions.iter() {
+			sum += t.value(&client).await;
+		}
+
+		sum
+	}
+
+	pub async fn balence(&self, context : &CustomContext) -> f64 {
+		let (price, received) =
+			futures::join!(self.price(&context), self.amount_received(&context.stripe));
+		price - received
 	}
 }
 
@@ -227,3 +241,5 @@ impl Booking {
 		self.get_tickets(context).await
 	}
 }
+
+

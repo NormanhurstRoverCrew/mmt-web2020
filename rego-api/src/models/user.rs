@@ -4,7 +4,7 @@ use crate::{
 };
 use bson::{doc, oid::ObjectId};
 use juniper::{GraphQLInputObject, ID};
-use mmt::{Db, Update, DB};
+use mmt::{ Db, Update, DB};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
@@ -57,6 +57,7 @@ impl User {
 			code :           rand::thread_rng()
 				.sample_iter(&Alphanumeric)
 				.take(16)
+				.map(|c| c as char)
 				.collect::<String>(),
 		}
 	}
@@ -95,10 +96,12 @@ impl User {
 		}
 	}
 
-	pub fn get_ticket(&self, _db : &CustomContext) -> Option<Ticket> {
-		let _user_id = dbg!(&self.id);
+	pub async fn get_ticket(&self, context : &CustomContext) -> Option<Ticket> {
+		let user_id = dbg!(&self.id);
 
-		None
+        Ticket::find_one(&context.db, doc! {
+            "user_id" : user_id,
+        }).await
 	}
 }
 
@@ -127,5 +130,5 @@ impl User {
 		self.get_booking(context).await
 	}
 
-	fn ticket(&self, context : &CustomContext) -> Option<Ticket> { self.get_ticket(context) }
+	async fn ticket(&self, context : &CustomContext) -> Option<Ticket> { self.get_ticket(context).await }
 }

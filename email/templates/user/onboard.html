@@ -1,0 +1,21 @@
+{% extends "email.html" %}
+
+{% block head %}
+  <style>
+  </style>
+{% endblock %}
+
+{% block content %}
+	<p>
+		Hello {{ name }},
+	</p>
+	<p>
+		Either you bought a ticket to MMT or some other fab Queen/King has for you. Unless you've been living under a rock, you've probably noticed things have to change a little bit due to COVID-19, so this year team registration is happening online, before MMT.
+	</p>
+	<p>
+		Drivers will create a team, and passengers will register with a team using the Drivers vehicle registration.
+	</p>
+	<p>
+		<a href={{ checkin_link }}>Click here!</a>
+	</p>
+{% endblock %}
